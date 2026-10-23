@@ -1,6 +1,7 @@
 # project
 .output/
 .scratchpad/
+.third_party/
 
 # ROS 2 / colcon
 build/

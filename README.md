@@ -1,5 +1,17 @@
 # robbie_ros
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Status: planning](https://img.shields.io/badge/status-early%20planning-orange)](#)
+[![TRL 2](https://img.shields.io/badge/TRL-2-lightgrey)](https://en.wikipedia.org/wiki/Technology_readiness_level)
+[![ROS 2 Jazzy](https://img.shields.io/badge/ROS%202-Jazzy-22314E?logo=ros&logoColor=white)](https://docs.ros.org/en/jazzy/)
+[![MuJoCo](https://img.shields.io/badge/sim-MuJoCo-0b5fff)](https://mujoco.org/)
+[![Rerun](https://img.shields.io/badge/viz-Rerun-5c2d91)](https://rerun.io/)
+[![Raspberry Pi 4](https://img.shields.io/badge/Raspberry%20Pi-4-C51A4A?logo=raspberrypi&logoColor=white)](https://www.raspberrypi.com/products/raspberry-pi-4-model-b/)
+[![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![C++](https://img.shields.io/badge/C%2B%2B-00599C?logo=cplusplus&logoColor=white)](https://isocpp.org/)
+[![YouTube](https://img.shields.io/badge/YouTube-video-red?logo=youtube)](https://youtu.be/8_o7KxZShpw)
+[![Parent project](https://img.shields.io/badge/part%20of-robbie-8a2be2?logo=github)](https://github.com/busyDuckman/robbie)
+
 Robot control for Robbie, a desktop robot with a moving head and two round LCD eyes.
 
 robbie_ros is a ROS 2 system. It runs on a Raspberry Pi 4, or on the PC for simulation.
