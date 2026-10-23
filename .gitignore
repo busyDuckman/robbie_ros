@@ -1,0 +1,45 @@
+# project
+.output/
+.scratchpad/
+
+# ROS 2 / colcon
+build/
+install/
+log/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# C++
+*.o
+*.so
+*.a
+compile_commands.json
+.cache/
+
+# Rerun recordings and MuJoCo output
+*.rrd
+MUJOCO_LOG.TXT
+
+# Editors and OS
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local env and secrets
+.env
+.env.*
