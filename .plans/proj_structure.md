@@ -5,9 +5,9 @@ A standard colcon workspace: the repo root is the workspace, and the packages go
 ```
 robbie_ros/
 ├── justfile
-├── .third_party/         # gitignored downloads from just setup, e.g. mujoco-3.17.0/ (dev machine only)
+├── .third_party/         # gitignored downloads, e.g. the cached Ubuntu image for just setup-flash
 ├── scripts/              # setup, flash-image and deploy scripts called by just
-├── docker/               # Pi-side containers (eyes)
+├── docker/               # dev/ is the dev container (ADR 2); Pi-side containers (eyes) go here too
 ├── docs/                 # ADRs, photos, neck write-up
 └── src/
     ├── robbie_description/  # URDF with the <ros2_control> block, MuJoCo MJCF, meshes from robbie_openscad
@@ -30,7 +30,7 @@ Notes:
 - `robbie_interfaces` stays in the robbie repo, checked out next to robbie_ros. colcon builds it
   in place using `--base-paths` (ADR 3). No vcstool.
 - look_around comes in through pip.
-- `just setup` downloads pinned, checksummed MuJoCo into `.third_party/`, and `just build` points
-  CMake at it. `just clean` leaves it alone.
+- MuJoCo comes from apt via `ros-jazzy-mujoco-ros2-control` (its `mujoco_vendor` dependency
+  downloads MuJoCo). `just clean` leaves `.third_party/` alone.
 - Tests live inside each package, as ROS 2 expects.
 - The bridge node to the harness lives in the robbie repo (Layer B), not here.

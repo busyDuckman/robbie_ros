@@ -1,0 +1,6 @@
+# Python packages for the dev container's venv (/opt/venv), installed with uv.
+# The venv sees the system site-packages, so ROS 2's rclpy stays usable.
+# rerun-sdk is pinned: the Rerun viewer on the host must match the SDK version.
+# look_around tracks HEAD while it's co-developed.
+rerun-sdk==0.40.0
+lookaround @ git+https://github.com/busyDuckman/look_around.git#subdirectory=python

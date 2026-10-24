@@ -1,0 +1,32 @@
+# robbie_ros dev container (ADR 2). Used through just; on WSL, just adds compose.wslg.yaml.
+name: robbie_ros
+
+services:
+  dev:
+    build:
+      context: ../..
+      dockerfile: docker/dev/Dockerfile
+      args:
+        USER_UID: ${USER_UID:-1000}
+        USER_GID: ${USER_GID:-1000}
+    image: robbie_ros-dev
+    network_mode: host    # ROS 2 discovery works the same as running natively
+    ipc: host             # lets DDS use shared memory
+    stdin_open: true
+    tty: true
+    command: sleep infinity
+    environment:
+      DISPLAY: ${DISPLAY:-}
+    volumes:
+      - ../..:/ws/robbie_ros
+      - ../../../robbie:/ws/robbie          # sibling checkout, for robbie_interfaces (ADR 3)
+      - /tmp/.X11-unix:/tmp/.X11-unix       # GUI: MuJoCo viewer, RViz2
+      # Build output stays in volumes: fast, and out of the synced/Windows filesystem.
+      - build:/ws/robbie_ros/build
+      - install:/ws/robbie_ros/install
+      - log:/ws/robbie_ros/log
+
+volumes:
+  build:
+  install:
+  log:

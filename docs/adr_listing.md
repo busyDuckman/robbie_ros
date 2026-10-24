@@ -8,11 +8,15 @@ MuJoCo does the physics and Rerun does the visualisation and logging. MuJoCo han
 
 The sim plugs in at the hardware driver: motor commands go in, encoder angles and the home switch come out. Everything above that is the same code in the sim and on the Pi.
 
-## ADR 2: Development is done on Linux or WSL 2
+## ADR 2: Development runs in a Docker dev container
 
 Status: Accepted
 
-Development is done on Linux, or on Windows inside WSL 2. Native Windows is not supported for development. On WSL 2, the repo should live in the WSL filesystem (for example under `/home`), not on a Windows drive under `/mnt/c`.
+The dev container (`docker/dev/`) is Ubuntu 24.04 with ROS 2 Jazzy, ros2_control and the MuJoCo sim. MuJoCo runs inside the ROS control process, so it lives in the container too. The host only needs Docker and just, on Linux or WSL 2, with any distro. Nothing ROS is installed on the host. Native Windows is not supported.
+
+Build output (`build/`, `install/`, `log/`) lives in Docker volumes. The repo is still faster in the WSL filesystem (for example under `/home`) than under `/mnt/c`.
+
+Replaces the first version of this ADR, which installed ROS on the host and required Ubuntu 24.04 there.
 
 ## ADR 3: robbie_interfaces is built from a sibling checkout of robbie
 

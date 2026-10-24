@@ -44,3 +44,4 @@ desktop.ini
 # Local env and secrets
 .env
 .env.*
+!.env.example
