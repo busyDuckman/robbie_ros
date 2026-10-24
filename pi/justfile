@@ -1,0 +1,29 @@
+# The justfile on the Pi, installed to ~/justfile by provision.sh (and later by just deploy).
+# Thin: robot logic lives in ros2 robbie ... (robbie_cli); these recipes just call it.
+# Recipe names match the dev justfile: there "run" means "on the Pi", here it means "here".
+
+# List the available recipes
+default:
+    @just --justfile {{ quote(justfile()) }} --list
+
+# Show the status banner
+splash:
+
+# Overall robot status (ros2 robbie status)
+status:
+
+# Home the sleds
+home:
+
+# Start robbie_ros (systemd service)
+run:
+
+# Stop robbie_ros
+stop:
+
+# Follow the robbie_ros logs
+logs:
+
+# Follow first-boot provisioning (installs ROS 2, takes a while)
+provision-log:
+    tail -f /var/log/cloud-init-output.log

@@ -28,7 +28,8 @@ apt-get install -y \
     ros-jazzy-ros2-control ros-jazzy-ros2-controllers ros-jazzy-xacro \
     build-essential cmake git \
     gpiod libgpiod-dev i2c-tools libi2c-dev \
-    docker.io docker-compose-v2
+    docker.io docker-compose-v2 \
+    just
 
 log "rosdep"
 [ -e /etc/ros/rosdep/sources.list.d/20-default.list ] || rosdep init
@@ -49,6 +50,9 @@ usermod -aG gpio,i2c,spi,docker,dialout "$user"
 log "Shell"
 bashrc="/home/$user/.bashrc"
 grep -q "/opt/ros/jazzy/setup.bash" "$bashrc" 2>/dev/null || echo "source /opt/ros/jazzy/setup.bash" >> "$bashrc"
+# The Pi's justfile (pi/justfile in the repo) sits next to this script.
+here="$(cd "$(dirname "$0")" && pwd)"
+[ -f "$here/justfile" ] && install -o "$user" -g "$user" -m 644 "$here/justfile" "/home/$user/justfile"
 
 mkdir -p /var/lib/robbie
 date -Iseconds > /var/lib/robbie/provisioned

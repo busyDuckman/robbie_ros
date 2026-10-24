@@ -41,11 +41,27 @@ save_setting() {  # save_setting NAME VALUE: sets it now and saves it to .env
     mv "$env_file.tmp" "$env_file"
 }
 
+read_secret() {  # read_secret VAR "question": hidden input that echoes * per character
+    local c s=""
+    printf '%s: ' "$2"
+    while IFS= read -r -s -n1 c; do
+        if [ -z "$c" ]; then
+            break                                           # Enter
+        elif [ "$c" = $'\x7f' ] || [ "$c" = $'\b' ]; then   # Backspace
+            [ -n "$s" ] && { s="${s%?}"; printf '\b \b'; }
+        else
+            s+="$c"; printf '*'
+        fi
+    done
+    echo
+    printf -v "$1" '%s' "$s"
+}
+
 prompt_setting() {  # prompt_setting NAME "question" [default] [-s]
     local name="$1" question="$2" default="${3:-}" secret="${4:-}" value
     [ -n "${!name:-}" ] && return 0
     if [ "$secret" = "-s" ]; then
-        read -r -s -p "$question: " value; echo
+        read_secret value "$question"
     else
         read -r -p "$question${default:+ [$default]}: " value
     fi
@@ -56,19 +72,35 @@ prompt_setting() {  # prompt_setting NAME "question" [default] [-s]
 
 prompt_setting ROBBIE_HOSTNAME "Pi hostname" "robbie-ros"
 prompt_setting ROBBIE_USER "Pi user name" "robbie"
-prompt_setting ROBBIE_WIFI_SSID "WiFi network name (SSID)"
-prompt_setting ROBBIE_WIFI_PASSWORD "WiFi password" "" -s
+# Offer the host's saved WiFi networks (just passes them in, one per line) to save typing odd SSIDs.
+if [ -z "${ROBBIE_WIFI_SSID:-}" ] && [ -n "${ROBBIE_WIFI_KNOWN:-}" ]; then
+    mapfile -t known <<< "$ROBBIE_WIFI_KNOWN"
+    echo "WiFi networks saved on this computer:"
+    for i in "${!known[@]}"; do printf '  %d) %s\n' "$((i + 1))" "${known[$i]}"; done
+    echo "  0) type another name"
+    read -r -p "Network for the Pi to join (2.4 or 5 GHz) [0]: " choice
+    if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#known[@]}" ]; then
+        save_setting ROBBIE_WIFI_SSID "${known[$((choice - 1))]}"
+    fi
+fi
+prompt_setting ROBBIE_WIFI_SSID "WiFi network for the Pi to join (SSID, 2.4 or 5 GHz)"
+prompt_setting ROBBIE_WIFI_PASSWORD "Password for that WiFi network" "" -s
 prompt_setting ROBBIE_WIFI_COUNTRY "WiFi country code (e.g. AU, GB, US)"
 
 if [ -z "${ROBBIE_SSH_PUBKEY:-}" ]; then
-    # just reads the host's ~/.ssh/id_ed25519.pub and passes it in; the container can't see ~/.ssh.
-    [ -n "${ROBBIE_SSH_PUBKEY_DEFAULT:-}" ] || die "No SSH key at ~/.ssh/id_ed25519.pub on the host. Create one with: ssh-keygen -t ed25519"
+    # just finds a key on the host (host_ssh_key.sh) and passes it in; the container can't see ~/.ssh.
+    [ -n "${ROBBIE_SSH_PUBKEY_DEFAULT:-}" ] || die "No SSH public key found on the host (id_ed25519, id_ecdsa or id_rsa in ~/.ssh). Create one with: ssh-keygen -t ed25519"
     save_setting ROBBIE_SSH_PUBKEY "$ROBBIE_SSH_PUBKEY_DEFAULT"
 fi
 
 if [ -z "${ROBBIE_PASSWORD_HASH:-}" ]; then
     echo "Pick a password for $ROBBIE_USER. It's for the console only; SSH uses your key."
-    save_setting ROBBIE_PASSWORD_HASH "$(openssl passwd -6)"
+    read_secret pw1 "Console password"
+    read_secret pw2 "Same again"
+    [ -n "$pw1" ] || die "The console password can't be empty."
+    [ "$pw1" = "$pw2" ] || die "The passwords don't match."
+    save_setting ROBBIE_PASSWORD_HASH "$(printf '%s\n' "$pw1" | openssl passwd -6 -stdin)"
+    unset pw1 pw2
 fi
 echo "Using $ROBBIE_USER@$ROBBIE_HOSTNAME.local on WiFi '$ROBBIE_WIFI_SSID' ($ROBBIE_WIFI_COUNTRY)."
 
@@ -182,6 +214,7 @@ mcopy -o -i "$boot" "$work/network-config" ::network-config
 mcopy -o -i "$boot" "$work/config.txt" ::config.txt
 mmd -i "$boot" ::robbie 2>/dev/null || true  # already there on a re-run
 mcopy -o -i "$boot" "$here/provision.sh" ::robbie/provision.sh
+mcopy -o -i "$boot" "$repo_root/pi/justfile" ::robbie/justfile
 
 mv "$tmp_img" "$out_img"
 

@@ -8,6 +8,7 @@ robbie_ros/
 ├── .third_party/         # gitignored downloads, e.g. the cached Ubuntu image for just setup-flash
 ├── scripts/              # setup, flash-image and deploy scripts called by just
 ├── docker/               # dev/ is the dev container (ADR 2); Pi-side containers (eyes) go here too
+├── pi/                   # files installed on the Pi, e.g. its justfile (~/justfile: just status, just home)
 ├── docs/                 # ADRs, photos, neck write-up
 └── src/
     ├── robbie_description/  # URDF with the <ros2_control> block, MuJoCo MJCF, meshes from robbie_openscad
@@ -17,6 +18,7 @@ robbie_ros/
     ├── robbie_gaze/         # wraps look_around
     ├── robbie_eyes/         # eye node; the renderer/driver may run in docker/
     ├── robbie_safety/       # watchdog, e-stop, heartbeat
+    ├── robbie_cli/          # placeholder: ros2 verb extension (ros2 robbie status, ...), thin over existing topics
     └── robbie_bringup/      # launch files and config: pi.launch.py, sim.launch.py, controllers.yaml
 ```
 

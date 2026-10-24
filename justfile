@@ -43,12 +43,19 @@ clean:
 # create a flash image with a properly configured Ubuntu 24.04 to .output/robbie_ros.img
 # robbie will be available via robbie-ros.local
 setup-flash:
-    @{{ _compose_dev }} run --rm -e ROBBIE_SSH_PUBKEY_DEFAULT="$(cat ~/.ssh/id_ed25519.pub 2>/dev/null)" dev bash scripts/flash/setup_flash.sh
+    @{{ _compose_dev }} run --rm -e ROBBIE_SSH_PUBKEY_DEFAULT="$(bash scripts/flash/host_ssh_key.sh)" -e ROBBIE_WIFI_KNOWN="$(bash scripts/flash/host_wifi_list.sh)" dev bash scripts/flash/setup_flash.sh
 
 
 # install robbie_ros to a pi, or update the installation on a pi
 # The pi will be running th image created by setup-flash
 deploy:
+
+# ssh into the pi, as the user and hostname chosen in setup-flash (.env)
+login *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    [ -f .env ] && . ./.env
+    exec ssh "${ROBBIE_USER:-robbie}@${ROBBIE_HOSTNAME:-robbie-ros}.local" {{ args }}
 
 # start robbie_ros on the pi
 run:

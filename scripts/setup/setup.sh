@@ -9,7 +9,10 @@ step "Platform"
 [ "$(uname -s)" = "Linux" ] || die "Run just from Linux or a WSL 2 shell (ADR 2)."
 if grep -qi microsoft /proc/version 2>/dev/null; then
     echo "OK: WSL 2"
-    [[ "$repo_root" == /mnt/* ]] && warn "The repo is on a Windows drive ($repo_root). It will work better in a WSL filesystem, e.g. under /home."
+    if [[ "$repo_root" == /mnt/* ]]; then
+        warn "The repo is on a Windows drive ($repo_root). It will work better in a WSL filesystem, e.g. under /home."
+    fi
+    bash "$(dirname "$0")/wsl_networking.sh"
 else
     echo "OK: Linux"
 fi

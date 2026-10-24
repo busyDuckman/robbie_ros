@@ -1,0 +1,19 @@
+          ╭─╮╭─╮╭╮ ╭╮ ╷╭─╴   
+          ├┬╯│ │├┴╮├┴╮│├╴    
+          ╵╰╴╰─╯╰─╯╰─╯╵╰─╴   
+
+ ⣏⡱ ⢀⡀ ⣇⡀ ⣇⡀ ⠄ ⢀⡀   ⣏⡱ ⡎⢱ ⢎⡑   ⠊⡱  
+ ⠇⠱ ⠣⠜ ⠧⠜ ⠧⠜ ⠇ ⠣⠭   ⠇⠱ ⠣⠜ ⠢⠜   ⠮⠤  
+                                   
+robbie-ros ver: xxx     ip:  xxx   
+see: https://github.com/busyDuckman/robbie_ros
+
+OS: xxx
+platform: Raspbery Pi..... (or docker image)
+
+Services running:
+  - look_around: port xxx
+  - interface node (ROS 2): xxx
+
+
+  
