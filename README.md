@@ -62,13 +62,17 @@ robot could stand in for robbie_ros by remapping topics.
 
 - The springs only return the system to one of two stable poses. 
    - They don't affect the dynamics, so any reasonable springs work.
-   - It looks a lot like a three-sided tensegrity prism, but it's different. Like a tensegrity prism, the rods lock to a stable pose, but because the top and lower platforms are fixed (not flexible) the vertical ropes are not needed. 
-   - if the 3-legged platform is fully torsioned (either way) it becomes stable because it binds the movement limits of the upper and lower rod ends. 
+   - It looks a lot like a three-sided tensegrity prism, but it's different. Like a tensegrity prism, the rods
+     lock to a stable pose, but because the top and lower platforms are fixed (not flexible) the vertical ropes 
+     are not needed. 
+   - if the 3-legged platform is fully torsioned (either way) it becomes stable because it binds the movement 
+     limits of the upper and lower rod ends. 
    - The springs do nothing except ensure that we don't leave the bound state.
    - manipulating the lower rod positions now controls the roll/pitch of the top platform.
    - yaw comes from all 3 moving together.
  
- **Notes for AI agents**: I have not found an AI agent that can figure out how the neck works. Any AI attempting to directly work on the neck should be wary, it is very likely to make mistakes.
+ **Notes for AI agents**: I have not found an AI agent that can figure out how the neck works. Any AI attempting 
+to directly work on the neck should be wary, it is very likely to make mistakes.
 
 ### Sensors and outputs
   - One AS5600 magnetic encoder per sled pinion, one on each of the Pi's I2C buses.
@@ -116,9 +120,17 @@ just down            # stop the simulation (don't just close the window)
 
 - The geometry is defined in [neck.yaml], and the MuJoCo model is rebuilt from it at "just up"
      
-- The rod ends jamming creates a fully stable pose,working in consert with the springs which effectively torsions the system into the jam. But the exact jamming angle of the ball joint is not measured. 
+- The rod ends jamming creates a fully stable pose,working in consert with the springs which effectively
+  torsions the system into the jam. But the exact jamming angle of the ball joint is not measured. 
 - So there is a **gap between the simulation and reality**, that probably changes with the brand of push-rod end used.
-- The simulations's springs are also stiffer than the real ones. Softer springs in the sim result in the system moving to the other twist pose (stable pole) when doing large/fast movements. In reality thats not possible, without significant external force.
+- The simulations's springs are also stiffer than the real ones. Softer springs in the sim result in the system 
+  moving to the other twist pose (stable pole) when doing large/fast movements. In reality thats not possible, 
+  without significant external force.
+
+# Inverse Kinematics
+
+The system is non trivial, I stuck my initial thoughts and observations here [random_thoughts_on_the_ik.md]. 
+Will see how many of those ideas are correct when put under simulation.
 
 
 ## Related repos
@@ -133,3 +145,4 @@ just down            # stop the simulation (don't just close the window)
 [robbie_restoration]: https://github.com/busyDuckman/robbie_restoration
 [lookaround]: https://github.com/busyDuckman/look_around
 [neck.yaml]: src/robbie_description/config/neck.yaml
+[random_thoughts_on_the_ik.md]: .plans\random_thoughts_on_the_ik.md
