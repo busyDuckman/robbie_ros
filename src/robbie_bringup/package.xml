@@ -16,6 +16,7 @@
   <exec_depend>joint_state_broadcaster</exec_depend>
   <exec_depend>forward_command_controller</exec_depend>
   <exec_depend>pose_broadcaster</exec_depend>
+  <exec_depend>robbie_poser</exec_depend>
   <!-- sim only; the Pi launch won't need it -->
   <exec_depend>mujoco_ros2_control</exec_depend>
 

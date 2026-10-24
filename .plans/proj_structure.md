@@ -18,6 +18,7 @@ robbie_ros/
     ├── robbie_gaze/         # wraps look_around
     ├── robbie_eyes/         # eye node; the renderer/driver may run in docker/
     ├── robbie_safety/       # watchdog, e-stop, heartbeat
+    ├── robbie_poser/        # sim tool: a window with yaw and per-sled sliders, and the head pose read back
     ├── robbie_cli/          # placeholder: ros2 verb extension (ros2 robbie status, ...), thin over existing topics
     └── robbie_bringup/      # launch files and config: pi.launch.py, sim.launch.py, controllers.yaml
 ```

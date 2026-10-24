@@ -1,6 +1,8 @@
 """Robbie in the MuJoCo sim: ros2_control with mujoco_ros2_control standing in for the hardware.
 
-    ros2 launch robbie_bringup sim.launch.py [headless:=true]
+    ros2 launch robbie_bringup sim.launch.py [headless:=true] [poser:=false]
+
+poser opens the neck poser window (robbie_poser), for moving the sleds by hand.
 
 Move the sleds (orbit angles in radians; 0, 120 and 240 deg is level):
     ros2 topic pub --once /sled_position_controller/commands std_msgs/msg/Float64MultiArray \
@@ -9,6 +11,7 @@ Move the sleds (orbit angles in radians; 0, 120 and 240 deg is level):
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, Shutdown
+from launch.conditions import IfCondition
 from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterFile, ParameterValue
@@ -53,7 +56,12 @@ def generate_launch_description():
         )
     )
 
+    nodes.append(
+        Node(package="robbie_poser", executable="poser", output="both", condition=IfCondition(LaunchConfiguration("poser")))
+    )
+
     return LaunchDescription([
         DeclareLaunchArgument("headless", default_value="false", description="Run without the MuJoCo window"),
+        DeclareLaunchArgument("poser", default_value="true", description="Open the neck poser window"),
         *nodes,
     ])

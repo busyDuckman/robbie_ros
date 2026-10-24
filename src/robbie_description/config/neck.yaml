@@ -1,8 +1,10 @@
-# Neck geometry. Metres, degrees, kg.
+# Robbies Neck geometry (Metres, degrees, kg).
 # Used by gen_neck_mjcf.py to build the MuJoCo model, and later by robbie_neck.
 #
-# Sources: "openscad" is robbie_openscad; "measured" is the old build (.plans/geometry.md);
-# "estimate" is a guess.
+# Sources: 
+#  - "openscad" is robbie_openscad proj
+#  - "measured" is using a ruler or calipers on the existing build see (.plans/geometry.md);
+
 
 gears:                    # openscad: robbie_common.scad
   module: 0.0015

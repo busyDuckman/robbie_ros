@@ -103,27 +103,22 @@ From Linux or a WSL shell, after `just setup`:
 
 ```
 just up              # build, then start the sim
-just up --headless   # without the window
+just up --headless   # without the windows
 just down            # stop the simulation (don't just close the window)
 ```
 
-Move the sleds from a second terminal (`just shell`). The values are orbit angles in radians;
-0, 2.09 and 4.19 (120 deg apart) is level, and adding the same amount to all three yaws the head:
+"just up" also opens a small gui for driving the robots joints, etc.
 
-```
-ros2 topic pub --once /sled_position_controller/commands std_msgs/msg/Float64MultiArray "data: [0.35, 2.09, 4.19]"
-ros2 topic echo /joint_states                  # sled angles
-ros2 topic echo /head_pose_broadcaster/pose    # the head's true pose (sim only)
-```
+<img src="docs/referencw_potos/pose_in_simulation.jpg" alt="The neck in the MuJoCo viewer" width="600">
 
-In the viewer, double-click a part to select it, then Ctrl + right-drag to push it.
 
 **Notes**
 
-- The geometry lives in src/robbie_description/config/neck.yaml
-  (The MuJoCo model is generated from it at build time)
-- The rod ends jam at the stable pose, and the springs hold the neck there.
-- The sim's springs are stiffer than the real ones. Softer springs in the sim result in the system moving to the other twist pose (stable pole) when doing large/fast movements. In reality thats not possible, without external force.
+- The geometry is defined in [neck.yaml], and the MuJoCo model is rebuilt from it at "just up"
+     
+- The rod ends jamming creates a fully stable pose,working in consert with the springs which effectively torsions the system into the jam. But the exact jamming angle of the ball joint is not measured. 
+- So there is a **gap between the simulation and reality**, that probably changes with the brand of push-rod end used.
+- The simulations's springs are also stiffer than the real ones. Softer springs in the sim result in the system moving to the other twist pose (stable pole) when doing large/fast movements. In reality thats not possible, without significant external force.
 
 
 ## Related repos
@@ -137,3 +132,4 @@ In the viewer, double-click a part to select it, then Ctrl + right-drag to push 
 [robbie_openscad]: https://github.com/busyDuckman/robbie_openscad
 [robbie_restoration]: https://github.com/busyDuckman/robbie_restoration
 [lookaround]: https://github.com/busyDuckman/look_around
+[neck.yaml]: src/robbie_description/config/neck.yaml

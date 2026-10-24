@@ -72,15 +72,15 @@ stop:
 ## --------------------------------------------------------------------------------------------------------------------
 # local dev
 
-# (re-)start the MuJoCo sim, the Rerun viewer and robbie_ros against the sim
+# (re-)start the MuJoCo sim, the neck poser window, the Rerun viewer and robbie_ros against the sim
 #  --headless to not show the simulator window
 up *flags: down build
     #!/usr/bin/env bash
     set -euo pipefail
-    headless=false
-    [[ " {{ flags }} " == *" --headless "* ]] && headless=true
+    headless=false poser=true
+    [[ " {{ flags }} " == *" --headless "* ]] && headless=true poser=false
     {{ _compose_dev }} run -d --name {{ _sim_container }} dev bash scripts/dev/ros.sh \
-        ros2 launch robbie_bringup sim.launch.py headless:=$headless >/dev/null
+        ros2 launch robbie_bringup sim.launch.py headless:=$headless poser:=$poser >/dev/null
     for i in $(seq 1 30); do
         if docker logs {{ _sim_container }} 2>&1 | grep -q "Configured and activated head_pose_broadcaster"; then
             [ "$headless" = true ] || docker exec {{ _sim_container }} bash scripts/dev/size_window.sh {{ _sim_window }}
