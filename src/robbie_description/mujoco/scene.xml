@@ -1,0 +1,23 @@
+<mujoco model="robbie_scene">
+  <!-- The sim's world: the generated neck (neck.xml, from config/neck.yaml) on a table. -->
+  <include file="neck.xml"/>
+
+  <statistic center="0 0 0.1" extent="0.3"/>
+
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0"/>
+    <global azimuth="150" elevation="-25"/>
+  </visual>
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="3072"/>
+    <texture type="2d" name="table" builtin="checker" mark="edge" rgb1="0.45 0.35 0.25" rgb2="0.4 0.3 0.2"
+      markrgb="0.6 0.5 0.4" width="300" height="300"/>
+    <material name="table" texture="table" texuniform="true" texrepeat="10 10"/>
+  </asset>
+
+  <worldbody>
+    <light pos="0 0 1" dir="0 0 -1" directional="true"/>
+    <geom name="table" type="plane" size="0.5 0.5 0.01" material="table"/>
+  </worldbody>
+</mujoco>

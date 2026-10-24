@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  FastDDS for the dev container: UDP on 127.0.0.1 only, no shared memory.
+  With FastDDS's default transports, nodes started together (as in sim.launch.py) didn't get each
+  other's data until some other ROS process joined; on WSL 2 the sim never came up. Loopback-only
+  UDP fixes it, and the sim and just shell containers still see each other (network_mode: host).
+-->
+<profiles xmlns="http://www.eprosima.com">
+  <transport_descriptors>
+    <transport_descriptor>
+      <transport_id>udp_loopback</transport_id>
+      <type>UDPv4</type>
+      <interfaceWhiteList><address>127.0.0.1</address></interfaceWhiteList>
+    </transport_descriptor>
+  </transport_descriptors>
+  <participant profile_name="participant" is_default_profile="true">
+    <rtps>
+      <userTransports><transport_id>udp_loopback</transport_id></userTransports>
+      <useBuiltinTransports>false</useBuiltinTransports>
+    </rtps>
+  </participant>
+</profiles>

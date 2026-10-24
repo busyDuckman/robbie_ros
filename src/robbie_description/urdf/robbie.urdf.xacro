@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<!--
+  Robbie, for ros2_control: just the three sled joints. URDF can't describe the neck's closed
+  loop, so the full neck is in the MuJoCo model, and the head pose will come from robbie_neck.
+
+  Each sled joint is the sled's orbit angle around the collar, in radians. 0 is -Y, as in
+  robbie_openscad. The sleds share one track and can't pass each other.
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="robbie">
+
+  <xacro:arg name="sim" default="true"/>
+  <xacro:arg name="headless" default="false"/>
+
+  <xacro:property name="neck" value="${xacro.load_yaml('$(find robbie_description)/config/neck.yaml')}"/>
+  <xacro:property name="pivot_r" value="${neck['sled']['pivot_radius']}"/>
+  <xacro:property name="pivot_z" value="${neck['collar_z'] + neck['sled']['pivot_height']}"/>
+
+  <link name="world"/>
+  <link name="base_link"/>
+  <joint name="base_joint" type="fixed">
+    <parent link="world"/>
+    <child link="base_link"/>
+  </joint>
+
+  <xacro:macro name="sled" params="n">
+    <link name="sled_${n}_link">
+      <visual>
+        <origin xyz="0 ${-pivot_r} ${pivot_z}"/>
+        <geometry><box size="0.033 0.024 0.024"/></geometry>
+      </visual>
+    </link>
+    <joint name="sled_${n}" type="continuous">
+      <parent link="base_link"/>
+      <child link="sled_${n}_link"/>
+      <axis xyz="0 0 1"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:sled n="1"/>
+  <xacro:sled n="2"/>
+  <xacro:sled n="3"/>
+
+  <xacro:include filename="$(find robbie_description)/urdf/robbie.ros2_control.xacro"/>
+  <xacro:robbie_ros2_control sim="$(arg sim)" headless="$(arg headless)"
+                             start_deg="${neck['sled']['start_deg']}"/>
+
+</robot>

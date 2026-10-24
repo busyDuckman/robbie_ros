@@ -1,0 +1,54 @@
+<?xml version="1.0"?>
+<!--
+  The ros2_control block. The sim swaps in for the real hardware here (ADR 1, ADR 4); everything
+  above it is the same.
+
+  For now the sleds take a position command. The real N20s will take velocity, so that comes in
+  with robbie_hardware.
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="robbie_ros2_control" params="sim headless start_deg">
+    <ros2_control name="robbie" type="system">
+      <hardware>
+        <xacro:if value="${sim}">
+          <plugin>mujoco_ros2_control/MujocoSystemInterface</plugin>
+          <param name="mujoco_model">$(find robbie_description)/mujoco/scene.xml</param>
+          <param name="headless">${headless}</param>
+          <param name="sim_speed_factor">1.0</param>
+        </xacro:if>
+        <xacro:unless value="${sim}">
+          <!-- robbie_hardware/RobbieSystem, once it exists -->
+        </xacro:unless>
+      </hardware>
+
+      <xacro:macro name="sled_joint" params="n deg">
+        <joint name="sled_${n}">
+          <command_interface name="position"/>
+          <state_interface name="position">
+            <param name="initial_value">${radians(deg)}</param>
+          </state_interface>
+          <state_interface name="velocity"/>
+        </joint>
+      </xacro:macro>
+      <xacro:sled_joint n="1" deg="${start_deg[0]}"/>
+      <xacro:sled_joint n="2" deg="${start_deg[1]}"/>
+      <xacro:sled_joint n="3" deg="${start_deg[2]}"/>
+
+      <xacro:if value="${sim}">
+        <!-- The sim's true head pose (MJCF sensors head_pos and head_quat). The real robot has no
+             such sensor; there the pose comes from robbie_neck. -->
+        <sensor name="head_pose">
+          <param name="mujoco_type">pose</param>
+          <param name="mujoco_sensor_name">head</param>
+          <state_interface name="position.x"/>
+          <state_interface name="position.y"/>
+          <state_interface name="position.z"/>
+          <state_interface name="orientation.x"/>
+          <state_interface name="orientation.y"/>
+          <state_interface name="orientation.z"/>
+          <state_interface name="orientation.w"/>
+        </sensor>
+      </xacro:if>
+    </ros2_control>
+  </xacro:macro>
+</robot>

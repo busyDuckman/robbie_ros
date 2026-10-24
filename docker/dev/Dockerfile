@@ -25,6 +25,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         xz-utils fdisk mtools openssl gnupg dirmngr \
     && rm -rf /var/lib/apt/lists/*
 
+# xdotool: just up resizes the MuJoCo window, which otherwise opens at full-monitor size.
+RUN apt-get update && apt-get install -y --no-install-recommends xdotool \
+    && rm -rf /var/lib/apt/lists/*
+
 # Run as the host user's UID/GID, so files written to the mounted repo aren't owned by root.
 # Ubuntu 24.04 images ship an 'ubuntu' user on UID 1000, so it goes first.
 RUN (userdel -r ubuntu 2>/dev/null || true) \

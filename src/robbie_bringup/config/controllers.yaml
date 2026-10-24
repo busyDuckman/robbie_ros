@@ -1,0 +1,25 @@
+controller_manager:
+  ros__parameters:
+    update_rate: 100
+
+joint_state_broadcaster:
+  ros__parameters:
+    type: joint_state_broadcaster/JointStateBroadcaster
+
+# Orbit angle per sled, in radians: ros2 topic pub /sled_position_controller/commands ...
+# Nothing here stops the sleds colliding yet; that's robbie_controllers' job.
+sled_position_controller:
+  ros__parameters:
+    type: forward_command_controller/ForwardCommandController
+    interface_name: position
+    joints:
+      - sled_1
+      - sled_2
+      - sled_3
+
+# Sim only: the true head pose, on /head_pose_broadcaster/pose.
+head_pose_broadcaster:
+  ros__parameters:
+    type: pose_broadcaster/PoseBroadcaster
+    pose_name: head_pose
+    frame_id: world

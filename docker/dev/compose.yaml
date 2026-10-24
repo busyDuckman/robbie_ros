@@ -11,12 +11,16 @@ services:
         USER_GID: ${USER_GID:-1000}
     image: robbie_ros-dev
     network_mode: host    # ROS 2 discovery works the same as running natively
-    ipc: host             # lets DDS use shared memory
+    ipc: host             # shared memory for the MuJoCo viewer (X11 MIT-SHM); DDS doesn't use it (fastdds.xml)
     stdin_open: true
     tty: true
     command: sleep infinity
     environment:
       DISPLAY: ${DISPLAY:-}
+      # ROS 2 only talks within this machine (sim, just shell). It's also needed on WSL: with
+      # mirrored networking, the default multicast discovery finds nothing.
+      ROS_AUTOMATIC_DISCOVERY_RANGE: LOCALHOST
+      FASTRTPS_DEFAULT_PROFILES_FILE: /ws/robbie_ros/docker/dev/fastdds.xml
     volumes:
       - ../..:/ws/robbie_ros
       - ../../../robbie:/ws/robbie          # sibling checkout, for robbie_interfaces (ADR 3)

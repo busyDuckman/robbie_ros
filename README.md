@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Status: planning](https://img.shields.io/badge/status-early%20planning-orange)](#)
-[![TRL 2](https://img.shields.io/badge/TRL-2-lightgrey)](https://en.wikipedia.org/wiki/Technology_readiness_level)
+[![TRL 3](https://img.shields.io/badge/TRL-2-lightgrey)](https://en.wikipedia.org/wiki/Technology_readiness_level)
 [![ROS 2 Jazzy](https://img.shields.io/badge/ROS%202-Jazzy-22314E?logo=ros&logoColor=white)](https://docs.ros.org/en/jazzy/)
 [![MuJoCo](https://img.shields.io/badge/sim-MuJoCo-0b5fff)](https://mujoco.org/)
 [![Rerun](https://img.shields.io/badge/viz-Rerun-5c2d91)](https://rerun.io/)
@@ -17,7 +17,7 @@ Robot control for Robbie, a desktop robot with a moving head and two round LCD e
 robbie_ros is a ROS 2 system. It runs on a Raspberry Pi 4, or on the PC for simulation.
 
 
-> Status: early planning. Nothing here runs yet.
+> Status: ROS 2 setup, deployment to PI-4 works, MuJoCo simulation.
 
 ## Where it fits
 
@@ -36,8 +36,7 @@ robot could stand in for robbie_ros by remapping topics.
 
 ## What it does
 
-- **Neck control.** Turns a wanted head pose into sled motion, and keeps the sleds from
-  colliding.
+- **Neck control.** Turns a desired head pose into sled motion, and keeps the sleds from colliding.
 - **Homing.** Works out where the sleds are at power-on, using the encoders and a single
   shared home switch. It must work whatever order the sleds were assembled in.
 - **Gaze.** Turns gaze targets from the harness into natural motion using [lookaround].
@@ -88,17 +87,43 @@ These photos are quite old; this repo is a re-implementation (using modern tools
 Assembly animation (from [robbie_openscad]):
 
 <a href="https://youtu.be/8_o7KxZShpw">
-  <img src="https://img.youtube.com/vi/8_o7KxZShpw/0.jpg" alt="Robbie assembly animation on YouTube" width="480">
+  <img src="https://img.youtube.com/vi/8_o7KxZShpw/0.jpg" alt="Robbie assembly animation on YouTube" width="600">
 </a>
 
 
 ## Simulation
 
-The sim uses MuJoCo for physics and Rerun for visualisation and logging. It plugs in at the
-hardware driver, so everything above the driver is the same code in sim and on the Pi. See
-[ADR1](docs/adr_listing.md).
+The simulation uses MuJoCo for physics and Rerun for visualisation and logging. It plugs in at the
+hardware driver, so everything above the driver is the same code in sim and on the Pi.
+
+<img src="docs/referencw_potos/simulator.jpg" alt="The neck in the MuJoCo viewer" width="600">
 
 
+From Linux or a WSL shell, after `just setup`:
+
+```
+just up              # build, then start the sim
+just up --headless   # without the window
+just down            # stop the simulation (don't just close the window)
+```
+
+Move the sleds from a second terminal (`just shell`). The values are orbit angles in radians;
+0, 2.09 and 4.19 (120 deg apart) is level, and adding the same amount to all three yaws the head:
+
+```
+ros2 topic pub --once /sled_position_controller/commands std_msgs/msg/Float64MultiArray "data: [0.35, 2.09, 4.19]"
+ros2 topic echo /joint_states                  # sled angles
+ros2 topic echo /head_pose_broadcaster/pose    # the head's true pose (sim only)
+```
+
+In the viewer, double-click a part to select it, then Ctrl + right-drag to push it.
+
+**Notes**
+
+- The geometry lives in src/robbie_description/config/neck.yaml
+  (The MuJoCo model is generated from it at build time)
+- The rod ends jam at the stable pose, and the springs hold the neck there.
+- The sim's springs are stiffer than the real ones. Softer springs in the sim result in the system moving to the other twist pose (stable pole) when doing large/fast movements. In reality thats not possible, without external force.
 
 
 ## Related repos

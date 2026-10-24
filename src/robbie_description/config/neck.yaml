@@ -1,0 +1,42 @@
+# Neck geometry. Metres, degrees, kg.
+# Used by gen_neck_mjcf.py to build the MuJoCo model, and later by robbie_neck.
+#
+# Sources: "openscad" is robbie_openscad; "measured" is the old build (.plans/geometry.md);
+# "estimate" is a guess.
+
+gears:                    # openscad: robbie_common.scad
+  module: 0.0015
+  ring_teeth: 56
+  pinion_teeth: 9
+
+collar_z: 0.040           # openscad: collar bottom above the table (base_h)
+
+sled:
+  pivot_radius: 0.043     # openscad: rod-end centre from the collar axis. The old build measured ~0.050.
+  pivot_height: 0.024     # openscad: rod-end centre above the collar bottom
+  half_width: 0.0165      # openscad: sled_r, for the sled-to-sled collision boxes
+  start_deg: [0, 120, 240]  # orbit angle; 0 is -Y, as in robbie_openscad. 120 deg apart is level.
+  mass: 0.03              # estimate
+
+rod:
+  length: 0.087           # measured: pivot centre to pivot centre (M3 rod, 20 mm ball-joint rod ends)
+  radius: 0.0015          # M3 threaded rod
+  mass: 0.005             # estimate
+
+platform:
+  pivot_radius: 0.040     # measured: rod-end centre from the platform centre
+  rest_height: 0.070      # measured (rough): sled pivots to platform pivots, at rest. Sets the twist.
+  twist_sign: 1           # which pole: +1 twists CCW seen from above, -1 CW
+  radius: 0.045           # estimate: for drawing only
+  mass: 0.25              # estimate: platform, Pi and eyes. Not critical.
+
+# The pole is where the rod ends jam (measured: they do). Twisting further is blocked there, and
+# the springs (plus gravity) push the neck into that limit.
+rod_end:
+  untwist_deg: 40         # estimate: how far a rod end can swivel back from the jam
+
+springs:                  # extension springs between neighbouring rods
+  from_top: 0.030         # measured: mount point, along the rod from the top pivot
+  free_length: 0.035      # measured: 8 mm OD. They only pull once stretched past this.
+  stiffness: 600          # N/m, unknown. Not critical on the real neck, but the sim flips to the other
+                          # pole on big moves (two sleds +-30 deg) below this.
