@@ -95,6 +95,10 @@ up *flags: down build
 down:
     @docker rm -f {{ _sim_container }} >/dev/null 2>&1 || true
 
+# Populate .plots/ with the neck kinematics plots (sweeps the sim when neck.yaml changes); see .plots/plots.md
+plot:
+    uv run scripts/plots/plot.py .plots
+
 ## --------------------------------------------------------------------------------------------------------------------
 # utils
 

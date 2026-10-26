@@ -1,5 +1,6 @@
 # project
 .output/
+.plots/
 .scratchpad/
 .third_party/
 
