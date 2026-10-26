@@ -185,29 +185,40 @@ all the charts below should still work.
 **tldr;** So now we have a stable system, that does not back-drive motors, and we need 
 to tune in the rod length and the jam angle of the sled linkage.
 
+**Note:** What follows is a generalised analysis aimed at helping people build a working robbie, with the linkages they purchased and whatever modifications they choose. At a pragmatic level the statements are broadly true, and quite useful.
+
+**Want these charts for a custom robbie?** edit neck.yaml, then run "just plot", plots will be saved to .plots after the simulation finishes.
+
 ## 5.2 What is the available movement?
 As you might expect the movement limits have a 3-fold rotational symmetry.  
-The minority of poses have only one solution, and it's uncommon to see more than 3 solutions. Going beyond a 5 degree roll or pitch, is not always possible, but a 15 degree pitch is possible in the regions the neck needs to be able to do so.
+The minority of poses have only one solution, and it's uncommon to see more than 3 solutions (left). Going beyond a 5 degree roll or pitch, is not always possible, but a 15 degree pitch is possible in the regions the neck needs to be able to do so.
 
-<img src="docs/default_plot_output/12_solution_count.png" alt="Sled solutions per roll/pitch target" width="600">
+The movement of the head can go off center, areas where we saw many solutions, also tend to offer a _graceful_ solution (middle).
 
+The difference in solution can easily change the head central pos 10 to 20 mm (right), so picking a good solution is vital to smooth movement.
 
-
-The movement of the head can go off center, areas where we saw many solutions, also tend to offer a _graceful__ solution.
-
-<img src="docs/default_plot_output/13_min_off.png" alt="Least off centre for each roll/pitch target" width="600">
-
-the difference in solution can easily change the head central pos 10 to 20 mm, so picking a good solution is vital to smooth movement.
-
-<img src="docs/default_plot_output/14_off_spread.png" alt="Least off centre for each roll/pitch target" width="600">
+<table>
+  <tr>
+    <td><img src="docs/default_plot_output/12_solution_count.png" alt="Sled solutions per roll/pitch target"></td>
+    <td><img src="docs/default_plot_output/13_min_off.png" alt="Least off centre for each roll/pitch target"></td>
+    <td><img src="docs/default_plot_output/14_off_spread.png" alt="Off-centre spread for each roll/pitch target"></td>
+  </tr>
+  <tr>
+    <td align="center">Left: solutions per target</td>
+    <td align="center">Middle: least off centre</td>
+    <td align="center">Right: off-centre spread</td>
+  </tr>
+</table>
 
 
 
 ## 5.4 Rod length trade off
 
+The quickest way to get more movement is to shorten the rods.
 
 <img src="docs/default_plot_output/14_roll_pitch_coverage_by_rod.png" alt="Roll/pitch coverage by rod length" width="900">
 
+The trade off to that being the head is more sensitive; sled error or backlash moves the head about 40% more, and there is more available torque to back drive the motor when at rest. So hey its the effect of a longer leaver (woah).
 
 <img src="docs/default_plot_output/01_tradeoff_vs_rod_len_jam75.png" alt="Rod length trade-off at jam 75" width="900">
 
@@ -215,7 +226,12 @@ the difference in solution can easily change the head central pos 10 to 20 mm, s
 
 ## 5.5 Jam angle trade off
 
+This one is set by the geometry (rest height and rod length), but capped by the rod end's max angle from the manufacturers spec, as the rod end angle grows with jam. higher Jam angles mean more possible motion. But it's still a game of getting that available motion to the head actions that count the most.
+
 <img src="docs/default_plot_output/13_roll_pitch_coverage_by_jam.png" alt="Roll/pitch coverage by jam angle" width="900">
+
+
+The main trade off is that the head movement becomes less centred as the jam angle increases. You also get similar "leverage costs" to decreasing the rod length.
 
 <img src="docs/default_plot_output/tradeoff.png" alt="Jam angle trade-off" width="900">
 
@@ -223,20 +239,18 @@ the difference in solution can easily change the head central pos 10 to 20 mm, s
 
 ## 5.6 The loop up vs look down trade off.
 
-Depending on configuration, the neck joint either looks up better, or looks down better, depending 
-on which nod line it is aligned with. 
+Depending on configuration, the neck joint either looks up better, or looks down better, depending on being aligned with a nod-line, or being 60deg off.
 
 
-<img src="docs/default_plot_output/18_pitch_by_head_orientation.png" alt="Largest pitch by head orientation, CW and CCW twist" width="700">
-
-
+<img src="docs/default_plot_output/18_pitch_by_head_orientation.png" alt="Largest pitch by head orientation, CW and CCW twist" width="900">
 
 
 
-As it turns out, manually twisting the head platform between the two stable poses, lets you 
-choose between the look up/down modes.
 
-<img src="docs/default_plot_output/25_render_turned_by_hand.png" alt="Platform turned by hand to the other twist, top view" width="700">
+
+As it turns out, manually twisting the head platform between the two stable poses, lets you (basicly) choose between the look up/down modes regardless of neck geometry.
+
+<img src="docs/default_plot_output/25_render_turned_by_hand.png" alt="Platform turned by hand to the other twist, top view" width="900">
 
 | Twist | Up (graceful) | Down (graceful) | Up (ugly) | Down (ugly) |
 |-------|--------------:|----------------:|----------:|------------:|
@@ -264,10 +278,10 @@ The [lookaround ] controller works well with this, it can set the preferred move
 
 
 ## 5.7 Putting it all together
-
+( under construction)
 
 # 6.0 Inverse Kinematics
-
+( under construction)
 
 # 7.0 Conclusion
 
