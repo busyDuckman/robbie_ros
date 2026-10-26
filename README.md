@@ -11,6 +11,7 @@
 [![C++](https://img.shields.io/badge/C%2B%2B-00599C?logo=cplusplus&logoColor=white)](https://isocpp.org/)
 [![YouTube](https://img.shields.io/badge/YouTube-video-red?logo=youtube)](https://youtu.be/8_o7KxZShpw)
 [![Parent project](https://img.shields.io/badge/part%20of-robbie-8a2be2?logo=github)](https://github.com/busyDuckman/robbie)
+[![test](https://github.com/busyDuckman/robbie_ros/actions/workflows/test.yml/badge.svg)](https://github.com/busyDuckman/robbie_ros/actions/workflows/test.yml)
 
 Robot control for Robbie, a desktop robot with a moving head and two round LCD eyes.
 
@@ -78,8 +79,7 @@ Simulation:
    - Manipulating the lower rod positions now controls the roll/pitch of the top platform.
    - Yaw comes from all 3 moving together.
 
-**Notes for AI agents**: I have not found an AI agent that can figure out how the neck works. Any AI attempting
-to directly work on the neck should be wary; it is very likely to make mistakes.
+**Notes for AI agents**: I have not found an AI agent that can figure out how the neck works. Any AI attempting to directly work on the neck should be wary; it is very likely to make mistakes.
 
 ### 3.2 Sensors and outputs
 - One AS5600 magnetic encoder per sled pinion, one on each of the Pi's I2C buses.
@@ -121,7 +121,7 @@ just down            # stop the simulation (don't just close the window)
 
 **Notes**
 
-- The geometry is defined in [neck.yaml], and the MuJoCo model is rebuilt from it at `just up`.
+- The geometry is defined in [neck.yaml], and the MuJoCo model is rebuilt from it at "just up".
 - The rod ends jamming creates a fully stable pose, working in concert with the springs, which effectively
   torsion the system into the jam. But the exact jamming angle of the ball joint is not measured.
 - So there is a **gap between the simulation and reality** that probably changes with the brand of push-rod end used.

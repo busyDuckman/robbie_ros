@@ -34,7 +34,7 @@ spec = importlib.util.spec_from_file_location("sweep", os.path.join(HERE, "sweep
 sw = importlib.util.module_from_spec(spec); spec.loader.exec_module(sw)
 
 JAM = 75
-CUR = sw.BASE["platform"]["twist_sign"]   # neck.yaml's twist_sign (the current model)
+CUR = 1 if sw.POLE == "CCW" else -1   # twist_sign as neck.yaml had it: +1 CCW, -1 CW (the current model)
 SIGNS = {"current": CUR, "mirrored": -CUR}
 TOP_CAM = '<camera name="top" pos="0 0 0.6" xyaxes="1 0 0 0 1 0" projection="orthographic" fovy="0.2"/>'
 TOP_FOVY = 0.2
@@ -42,11 +42,10 @@ TOP_FOVY = 0.2
 
 def xml(sign, jam=JAM):
     cfg = copy.deepcopy(sw.BASE)
-    cfg["platform"]["twist_sign"] = sign
     cfg["platform"]["rest_height"] = sw.rest_height(cfg, jam)
     # Render-only additions: a top camera and a bigger offscreen buffer. Neither touches the dynamics.
     vis = '<visual><global offwidth="1000" offheight="1000"/></visual>\n  '
-    return cfg, sw.gen.build(cfg).replace("<worldbody>", vis + "<worldbody>\n    " + TOP_CAM, 1)
+    return cfg, sw.gen.build(cfg, "CCW" if sign > 0 else "CW").replace("<worldbody>", vis + "<worldbody>\n    " + TOP_CAM, 1)
 
 
 class Sim(sw.Sim):
@@ -237,7 +236,8 @@ def add_arrow(scn, a, b, rgba, width=0.003):
 
 def snap(sim, r, cam, heading=None):
     """Render; the platform is drawn see-through so the top pivots show. heading draws the head's forward axis."""
-    sim.m.geom_rgba[sim.m.geom("platform").id] = [0.1, 0.1, 0.1, 0.25]
+    for g in ("platform", "head_disk"):
+        sim.m.geom_rgba[sim.m.geom(g).id][3] = 0.25
     r.update_scene(sim.d, camera=cam)
     if heading is not None:
         p = sim.d.body("platform").xpos.copy(); R = sim.d.body("platform").xmat.reshape(3, 3)
@@ -303,10 +303,10 @@ def cmd_render(out):
             mujoco.mj_step(sim.m, sim.d)
         r = mujoco.Renderer(sim.m, H, W)
         img = snap(sim, r, "top")
-        cur = " (current model, neck.yaml)" if names[d] == CUR else " (mirrored, twist_sign negated)"
+        cur = " (current model, CCW default)" if names[d] == CUR else " (mirrored, twist_sign negated)"
         top_panel(ax, img, sim, f"{d} viewed from top{cur}\ntwist_sign {names[d]:+d}, jam {JAM}")
         plt.imsave(os.path.join(out, f"rest_top_{d.lower()}_raw.png"), img)
-    fig.suptitle("Rest pose from the top (orthographic, looking down -Z; platform see-through; white eyes face +X)\n"
+    fig.suptitle("Rest pose from the top (orthographic, looking down -Z; platform see-through; white eyes: the head, at head.rotation_deg)\n"
                  "blue circle: rod bottom pivot on the sled, orange square: rod top pivot, green: orbit bottom to top",
                  fontsize=10)
     fig.savefig(os.path.join(out, "rest_top_cw_ccw.png"), dpi=110); plt.close(fig)

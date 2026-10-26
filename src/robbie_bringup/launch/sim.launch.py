@@ -1,8 +1,9 @@
 """Robbie in the MuJoCo sim: ros2_control with mujoco_ros2_control standing in for the hardware.
 
-    ros2 launch robbie_bringup sim.launch.py [headless:=true] [poser:=false]
+    ros2 launch robbie_bringup sim.launch.py [headless:=true] [poser:=false] [twist:=cw]
 
-poser opens the neck poser window (robbie_poser), for moving the sleds by hand.
+poser opens the neck poser window (robbie_poser), for moving the sleds by hand. twist is the pole the
+neck starts in, cw or ccw seen from above (default ccw).
 
 Move the sleds (orbit angles in radians; 0, 120 and 240 deg is level):
     ros2 topic pub --once /sled_position_controller/commands std_msgs/msg/Float64MultiArray \
@@ -22,11 +23,12 @@ CONTROLLERS = ["joint_state_broadcaster", "sled_position_controller", "head_pose
 
 def generate_launch_description():
     headless = LaunchConfiguration("headless")
+    twist = LaunchConfiguration("twist")
     urdf = PathJoinSubstitution([FindPackageShare("robbie_description"), "urdf", "robbie.urdf.xacro"])
     controllers = PathJoinSubstitution([FindPackageShare("robbie_bringup"), "config", "controllers.yaml"])
     robot_description = {
         "robot_description": ParameterValue(
-            Command(["xacro ", urdf, " sim:=true headless:=", headless]), value_type=str),
+            Command(["xacro ", urdf, " sim:=true headless:=", headless, " twist:=", twist]), value_type=str),
     }
 
     nodes = [
@@ -57,11 +59,14 @@ def generate_launch_description():
     )
 
     nodes.append(
-        Node(package="robbie_poser", executable="poser", output="both", condition=IfCondition(LaunchConfiguration("poser")))
+        Node(package="robbie_poser", executable="poser", output="both", parameters=[{"twist": twist}],
+             condition=IfCondition(LaunchConfiguration("poser")))
     )
 
     return LaunchDescription([
         DeclareLaunchArgument("headless", default_value="false", description="Run without the MuJoCo window"),
         DeclareLaunchArgument("poser", default_value="true", description="Open the neck poser window"),
+        DeclareLaunchArgument("twist", default_value="ccw", choices=["cw", "ccw"],
+                              description="The pole the neck starts in, seen from above"),
         *nodes,
     ])

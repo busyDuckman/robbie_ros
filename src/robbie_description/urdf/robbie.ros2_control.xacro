@@ -7,12 +7,12 @@
   with robbie_hardware.
 -->
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
-  <xacro:macro name="robbie_ros2_control" params="sim headless start_deg">
+  <xacro:macro name="robbie_ros2_control" params="sim headless twist start_deg">
     <ros2_control name="robbie" type="system">
       <hardware>
         <xacro:if value="${sim}">
           <plugin>mujoco_ros2_control/MujocoSystemInterface</plugin>
-          <param name="mujoco_model">$(find robbie_description)/mujoco/scene.xml</param>
+          <param name="mujoco_model">$(find robbie_description)/mujoco/scene_${twist}.xml</param>
           <param name="headless">${headless}</param>
           <param name="sim_speed_factor">1.0</param>
         </xacro:if>

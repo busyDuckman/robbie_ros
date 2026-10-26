@@ -2,37 +2,28 @@
 
 Sliders set a yaw (all sleds together) and an offset per sled on top of it. The command goes to
 /sled_position_controller/commands as orbit angles. The head pose is read back from
-/head_pose_broadcaster/pose (sim only), with the sled angles from /joint_states.
+/head_pose_broadcaster/pose (sim only, in the head's frame), with the sled angles from /joint_states.
 
-    ros2 run robbie_poser poser
+    ros2 run robbie_poser poser [--ros-args -p twist:=cw]
 """
 
 import math
-import os
 import sys
 
 import rclpy
-import yaml
-from ament_index_python.packages import get_package_share_directory
 from geometry_msgs.msg import PoseStamped
 from python_qt_binding.QtCore import Qt, QTimer
 from python_qt_binding.QtGui import QFont
 from python_qt_binding.QtWidgets import (
     QApplication, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget)
 from rclpy.node import Node
+from robbie_neck import config
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
 
 JOINTS = ["sled_1", "sled_2", "sled_3"]
 YAW_RANGE = 360      # deg either way. The neck can turn further; wider makes the slider too coarse.
 OFFSET_RANGE = 50    # deg either way; the sleds can't pass each other
-
-
-def start_angles():
-    """Sled start angles (deg), from robbie_description's neck.yaml."""
-    path = os.path.join(get_package_share_directory("robbie_description"), "config", "neck.yaml")
-    with open(path) as f:
-        return yaml.safe_load(f)["sled"]["start_deg"]
 
 
 def quat_to_rpy(q):
@@ -47,6 +38,8 @@ def quat_to_rpy(q):
 class PoserNode(Node):
     def __init__(self):
         super().__init__("robbie_poser")
+        self.pole = config.pole(self.declare_parameter("twist", "").value)
+        self.head_rotation = config.head_rotation_deg()
         self.pub = self.create_publisher(Float64MultiArray, "/sled_position_controller/commands", 10)
         self.sleds = None   # deg, from /joint_states
         self.pose = None
@@ -100,7 +93,7 @@ class PoserWindow(QWidget):
     def __init__(self, node):
         super().__init__()
         self.node = node
-        self.start = start_angles()
+        self.start = config.neck_yaml()["sled"]["start_deg"]
         self.synced = False   # sliders are set from the robot's current pose before they send anything
         self.setWindowTitle("Robbie neck poser")
 
@@ -127,12 +120,14 @@ class PoserWindow(QWidget):
         self.readout = {}
         state = QGroupBox("Measured")
         grid = QGridLayout(state)
-        rows = ["Head roll", "Head pitch", "Head yaw", "Head height", "Sled angles", "Sled gaps"]
+        rows = ["Twist", "Head rotation", "Head roll", "Head pitch", "Head yaw", "Head height", "Sled angles", "Sled gaps"]
         for r, name in enumerate(rows):
             grid.addWidget(QLabel(name), r, 0)
             self.readout[name] = QLabel("-")
             self.readout[name].setFont(mono)
             grid.addWidget(self.readout[name], r, 1)
+        self.readout["Twist"].setText(f"{node.pole:>7} seen from above")
+        self.readout["Head rotation"].setText(f"{node.head_rotation:7.1f} deg from rod end 1")
 
         layout = QVBoxLayout(self)
         layout.addWidget(command)

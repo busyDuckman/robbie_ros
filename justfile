@@ -34,13 +34,16 @@ build:
 
 # Basic unit test run (also what CI runs: .github/workflows/test.yml)
 test:
-    uv run --python 3.12 --with mujoco==3.12.0 --with numpy --with pyyaml --with pytest pytest -q scripts/plots
+    uv run --python 3.12 --with mujoco==3.12.0 --with numpy --with pyyaml --with matplotlib --with pytest pytest -q scripts/plots
 
 # Full testing, including sim runs (homing, pose-to-sled, unwinding)
 vet: test
 
-# remove temporary files (build/, install/, log/, recordings)
-clean:
+# remove build output: build/, install/ and log/ (their Docker volumes, and any copies on the host)
+# Stops the sim first, since it holds the volumes. .third_party/ and .plots/ are left alone.
+clean: down
+    docker volume rm -f robbie_ros_build robbie_ros_install robbie_ros_log
+    rm -rf build install log
 
 
 ## --------------------------------------------------------------------------------------------------------------------
@@ -74,14 +77,15 @@ stop:
 # local dev
 
 # (re-)start the MuJoCo sim, the neck poser window, the Rerun viewer and robbie_ros against the sim
-#  --headless to not show the simulator window
+#  --headless to not show the simulator window, --cw to start in the CW pole (default --ccw)
 up *flags: down build
     #!/usr/bin/env bash
     set -euo pipefail
-    headless=false poser=true
+    headless=false poser=true twist=ccw
     [[ " {{ flags }} " == *" --headless "* ]] && headless=true poser=false
+    [[ " {{ flags }} " == *" --cw "* ]] && twist=cw
     {{ _compose_dev }} run -d --name {{ _sim_container }} dev bash scripts/dev/ros.sh \
-        ros2 launch robbie_bringup sim.launch.py headless:=$headless poser:=$poser >/dev/null
+        ros2 launch robbie_bringup sim.launch.py headless:=$headless poser:=$poser twist:=$twist >/dev/null
     for i in $(seq 1 30); do
         if docker logs {{ _sim_container }} 2>&1 | grep -q "Configured and activated head_pose_broadcaster"; then
             [ "$headless" = true ] || docker exec {{ _sim_container }} bash scripts/dev/size_window.sh {{ _sim_window }}

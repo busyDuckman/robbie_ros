@@ -28,12 +28,17 @@ rod:
 platform:
   pivot_radius: 0.040     # measured: rod-end centre from the platform centre
   rest_height: 0.070      # measured (rough): sled pivots to platform pivots, at rest. Sets the twist.
-  twist_sign: 1           # which pole: +1 twists CCW seen from above, -1 CW
   radius: 0.045           # estimate: for drawing only
   mass: 0.25              # estimate: platform, Pi and eyes. Not critical.
 
+head:
+  rotation_deg: 20         # which way the head faces on the platform: 0 is centre to rod end 1, CCW seen
+                          # from above (docs/head_rotation.svg). Roll and pitch are in this frame.
+
 # The pole is where the rod ends jam (measured: they do). Twisting further is blocked there, and
 # the springs (plus gravity) push the neck into that limit.
+# Which pole (CW or CCW twist, seen from above) isn't set here: the owner can turn the neck into
+# either one by hand. robbie_ros is told at runtime (just up --cw in the sim, just twist on the Pi).
 rod_end:
   untwist_deg: 40         # estimate: how far a rod end can swivel back from the jam
 

@@ -10,6 +10,7 @@
 
   <xacro:arg name="sim" default="true"/>
   <xacro:arg name="headless" default="false"/>
+  <xacro:arg name="twist" default="ccw"/>   <!-- sim only: the pole, cw or ccw seen from above -->
 
   <xacro:property name="neck" value="${xacro.load_yaml('$(find robbie_description)/config/neck.yaml')}"/>
   <xacro:property name="pivot_r" value="${neck['sled']['pivot_radius']}"/>
@@ -41,7 +42,7 @@
   <xacro:sled n="3"/>
 
   <xacro:include filename="$(find robbie_description)/urdf/robbie.ros2_control.xacro"/>
-  <xacro:robbie_ros2_control sim="$(arg sim)" headless="$(arg headless)"
+  <xacro:robbie_ros2_control sim="$(arg sim)" headless="$(arg headless)" twist="$(arg twist)"
                              start_deg="${neck['sled']['start_deg']}"/>
 
 </robot>

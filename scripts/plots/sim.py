@@ -52,8 +52,9 @@ def with_rod(cfg, length):
     return c
 
 
-def with_twist(cfg, sign):
-    c = copy.deepcopy(cfg); c["platform"]["twist_sign"] = sign
+def with_twist(cfg, pole):
+    """pole: "CW" or "CCW" seen from above. It isn't in neck.yaml (it's set at runtime), so every sim cfg gets one here."""
+    c = copy.deepcopy(cfg); c["twist"] = pole
     return c
 
 
@@ -76,7 +77,9 @@ def feasible(s1, s2):
 class Sim:
     def __init__(self, cfg, render=False):
         self.cfg = cfg
-        x = gen.build(cfg)
+        if not render:   # the eyes' 2 g sit on the head; keep them at 0 so sweeps don't depend on head.rotation_deg
+            cfg = copy.deepcopy(cfg); cfg["head"]["rotation_deg"] = 0
+        x = gen.build(cfg, cfg["twist"])
         if render:   # a top camera and a bigger offscreen buffer; neither touches the dynamics
             vis = '<visual><global offwidth="1000" offheight="1000"/></visual>\n  '
             x = x.replace("<worldbody>", vis + "<worldbody>\n    " + TOP_CAM, 1)
@@ -104,11 +107,18 @@ class Sim:
         self.cur = off
 
     def head(self):
-        w, x, y, z = self.d.sensor("head_quat").data
+        """Roll, pitch, yaw (deg, ZYX) and position of the platform, in its own frame: +X is world +X at rest.
+        The plots work in this frame and turn it to any head orientation, so head.rotation_deg doesn't apply here."""
+        w, x, y, z = self.d.body("platform").xquat
         rpy = [math.degrees(math.atan2(2 * (w * x + y * z), 1 - 2 * (x * x + y * y))),
                math.degrees(math.asin(max(-1, min(1, 2 * (w * y - z * x))))),
                math.degrees(math.atan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z)))]
-        return rpy, self.d.sensor("head_pos").data.copy()
+        return rpy, self.d.body("platform").xpos.copy()
+
+    def head_zero(self):
+        """World angle (deg) of rod end 1 from the platform centre: head.rotation_deg's zero. Call at rest."""
+        _, t = self.pivots(); p = self.d.body("platform").xpos
+        return math.degrees(math.atan2(t[0][1] - p[1], t[0][0] - p[0]))
 
     def height_mm(self):
         return (self.d.sensor("head_pos").data[2] - self.cfg["collar_z"] - self.cfg["sled"]["pivot_height"]) * 1000
@@ -145,6 +155,7 @@ with open(GEN, "rb") as _f:
 
 
 def key(kind, cfg, extra=None):
+    cfg = {k: v for k, v in cfg.items() if k != "head"}   # the sweeps are in the platform frame; see Sim.head
     blob = json.dumps({"kind": kind, "cfg": _rounded(cfg), "extra": extra, "settings": SETTINGS, "gen": GEN_HASH,
                        "mujoco": mujoco.__version__}, sort_keys=True)
     return f"{kind}_{hashlib.sha256(blob.encode()).hexdigest()[:16]}"
@@ -156,7 +167,7 @@ def _sweep(job):
     t0 = time.time()
     sim = Sim(cfg)
     jam = round(jam_of(cfg), 3)
-    (r0, p0, y0), _ = sim.head(); h0 = sim.height_mm(); orbit = sim.orbit()
+    (r0, p0, y0), _ = sim.head(); h0 = sim.height_mm(); orbit = sim.orbit(); zero = sim.head_zero()
     springs = [sim.d.ten_length[i] * 1000 for i in range(3)]
     vals = list(range(-LIM, LIM + 1, STEP))
     rows, max_yaw = [], 0
@@ -174,11 +185,11 @@ def _sweep(job):
     sim.go([0, 0, 0]); sim.go([0, 0, 0])
     (r1, p1, y1), _ = sim.head(); h1 = sim.height_mm()
     bottom, top = rod_end_angles(cfg)
-    checks = dict(jam_deg=jam, rod_len_mm=round(cfg["rod"]["length"] * 1000, 3), twist_sign=cfg["platform"]["twist_sign"],
+    checks = dict(jam_deg=jam, rod_len_mm=round(cfg["rod"]["length"] * 1000, 3), twist=cfg["twist"],
                   pass_name=pass_name, points=len(rows), neutral_height_mm=round(h0, 3),
                   rest_change_max=round(max(abs(a - b) for a, b in zip((r0, p0, y0, h0), (r1, p1, y1, h1))), 4),
                   max_abs_yaw=round(max_yaw, 3), spring_len_rest_mm=round(min(springs), 3),
-                  orbit_deg=[round(v, 3) for v in orbit], direction=direction(orbit),
+                  orbit_deg=[round(v, 3) for v in orbit], direction=direction(orbit), head_zero_deg=round(zero, 3),
                   rod_end_bottom_deg=round(bottom, 3), rod_end_top_deg=round(top, 3), seconds=round(time.time() - t0))
     tmp = path + ".tmp"
     with open(tmp, "w", newline="") as f:

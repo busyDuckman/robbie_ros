@@ -26,7 +26,8 @@ def add_arrow(scn, a, b, rgba, width=0.003):
 
 def snap(sim, r, cam, heading=None):
     """Render with the platform see-through so the top pivots show. heading draws the head's forward axis."""
-    sim.m.geom_rgba[sim.m.geom("platform").id] = [0.1, 0.1, 0.1, 0.25]
+    for g in ("platform", "head_disk"):
+        sim.m.geom_rgba[sim.m.geom(g).id][3] = 0.25
     r.update_scene(sim.d, camera=cam)
     if heading is not None:
         p = sim.d.body("platform").xpos.copy(); R = sim.d.body("platform").xmat.reshape(3, 3)
@@ -98,9 +99,9 @@ def run(book, cfgs, label, poses):
         r = mujoco.Renderer(sim.m, H, W)
         top_panel(ax, snap(sim, r, "top"), sim, f"{label[d]} viewed from top, height {sim.height_mm():.2f} mm", nods_at_rest(sim))
     book.save(fig, F_, "render_rest_top", "Rest pose from the top, both twists",
-              "Sim render looking straight down (orthographic) at rest, platform drawn see-through, eyes at +X. The twist "
+              "Sim render looking straight down (orthographic) at rest, platform and head disk drawn see-through; eyes and orange stripe: the head at neck.yaml's head.rotation_deg (0 = rod end 1). The twist "
               "angle printed on each green arc is measured in the sim. " + key + "; red: nod lines.",
-              title="Rest pose from the top (sim render; white eyes face +X)\n" + key, dpi=110)
+              title="Rest pose from the top (sim render; white eyes and orange stripe: the head)\n" + key, dpi=110)
 
     fig, axes = plt.subplots(1, len(order), figsize=(6.5 * len(order), 7), constrained_layout=True, squeeze=False)
     for ax, d in zip(axes[0], order):
@@ -127,21 +128,21 @@ def run(book, cfgs, label, poses):
             sim = S.Sim(cfgs[d], render=True); sim.go(p["sleds"])
             _, pos = sim.head()
             r = mujoco.Renderer(sim.m, H, W)
-            h = p["heading"]
-            top, side = snap(sim, r, "top", h), snap(sim, r, side_cam(h), h)
-            R = sim.d.body("platform").xmat.reshape(3, 3); hr = math.radians(h)
+            h = p["heading"]; hf = h + p["zero"]   # head.rotation_deg, and the same in the platform frame
+            top, side = snap(sim, r, "top", hf), snap(sim, r, side_cam(hf), hf)
+            R = sim.d.body("platform").xmat.reshape(3, 3); hr = math.radians(hf)
             fwd = R[:, 0] * math.cos(hr) + R[:, 1] * math.sin(hr)
             left = -R[:, 0] * math.sin(hr) + R[:, 1] * math.cos(hr)
             hp, hroll = math.degrees(math.asin(fwd[2])), math.degrees(math.asin(left[2]))
             s = p["sleds"]
-            top_panel(axes[ri, 2 * ci], top, sim, f"{label[d]}, head at {h} deg (nod 1): {pose}\nsleds {s[0]:+g}, {s[1]:+g}, {s[2]:+g} deg",
-                      p["nods"])
+            top_panel(axes[ri, 2 * ci], top, sim, f"{label[d]}, head.rotation_deg {h}: {pose}\nsleds {s[0]:+g}, {s[1]:+g}, {s[2]:+g} deg",
+                      [n + p["zero"] for n in p["nods"]])
             ax = axes[ri, 2 * ci + 1]
             ax.imshow(side); ax.set_xticks([]); ax.set_yticks([])
             ax.set_title(f"{label[d]}: side view along the head's left axis\nhead pitch {hp:+.1f} deg, head roll {hroll:+.1f} deg, "
                          f"off {math.hypot(*pos[:2]) * 1000:.1f} mm", fontsize=10)
     book.save(fig, F_, "render_poses", "Rest, largest graceful pitch up and down (sim renders)",
-              "For each twist, the head facing along nod line 1: the rest pose and the sweep points with the largest "
+              "For each twist, the head at neck.yaml's head.rotation_deg: the rest pose and the sweep points with the largest "
               "graceful pitch up and down at that head orientation, re-driven in the sim. Red: nod lines (at rest). Top view and a side "
               "view along the head's left axis; orange arrow: the head's forward axis.",
-              title="Rest, largest graceful pitch up and down, head facing along nod line 1 (sim renders)", dpi=90)
+              title="Rest, largest graceful pitch up and down, head at head.rotation_deg (sim renders)", dpi=90)

@@ -45,7 +45,7 @@ class Sim(sw.Sim):
 
     def __init__(self, rod_len, jam):
         self.cfg = config(rod_len, jam)
-        self.m = sw.mujoco.MjModel.from_xml_string(sw.gen.build(self.cfg))
+        self.m = sw.mujoco.MjModel.from_xml_string(sw.gen.build(self.cfg, sw.POLE))
         self.m.geom_contype[:] = 0      # as sweep.py: MIN_GAP bounds the sweep, not the sim's sled boxes
         self.m.geom_conaffinity[:] = 0
         self.d = sw.mujoco.MjData(self.m)

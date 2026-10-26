@@ -33,7 +33,7 @@ def tilt(a):
 
 
 def by_heading(a):
-    """Head pitch/roll at each head heading on the platform (0 = +X, CCW): [heading, point].
+    """Head pitch/roll at each head heading on the platform (0 = a's +X, CCW): [heading, point].
 
     Pitch is the elevation of the head's forward axis (cos h, sin h), roll the elevation of its left axis,
     from the third row of R = Rz(yaw) Ry(pitch) Rx(roll)."""
@@ -44,6 +44,22 @@ def by_heading(a):
     h_pitch = np.degrees(np.arcsin(np.clip(r20 * c + r21 * s, -1, 1)))
     h_roll = np.degrees(np.arcsin(np.clip(-r20 * s + r21 * c, -1, 1)))
     return h_pitch, h_roll, np.broadcast_to(a[:, COLS["off"]][None, :], h_pitch.shape)
+
+
+def to_frame(a, deg):
+    """a with roll, pitch and yaw (ZYX) re-expressed for a head turned deg (CCW from the top) on the platform.
+    Yaw stays a residual: at rest it's unchanged."""
+    r, p, y = (np.radians(a[:, COLS[k]]) for k in ("roll", "pitch", "yaw"))
+    cr, sr, cp, sp, cy, sy = np.cos(r), np.sin(r), np.cos(p), np.sin(p), np.cos(y), np.sin(y)
+    h = np.radians(deg); ch, sh = np.cos(h), np.sin(h)
+    # columns 0 and 1 of R = Rz(y) Ry(p) Rx(r), and row 2 of column 2; R' = R Rz(h)
+    c0 = np.stack([cy * cp, sy * cp, -sp]); c1 = np.stack([cy * sp * sr - sy * cr, sy * sp * sr + cy * cr, cp * sr])
+    n0, n1 = c0 * ch + c1 * sh, -c0 * sh + c1 * ch
+    out = a.copy()
+    out[:, COLS["pitch"]] = np.degrees(-np.arcsin(np.clip(n0[2], -1, 1)))
+    out[:, COLS["roll"]] = np.degrees(np.arctan2(n1[2], cp * cr))
+    out[:, COLS["yaw"]] = (np.degrees(np.arctan2(n0[1], n0[0])) - deg + 180) % 360 - 180
+    return out
 
 
 def best_pitch(h_pitch, ok, sign):

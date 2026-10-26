@@ -15,6 +15,18 @@ status:
 # Home the sleds
 home:
 
+# Show or set the pole the neck sits in (cw or ccw, seen from above). Set it after turning the neck
+# into the other pole by hand; robbie_ros can't sense it. Takes effect when robbie_ros next starts.
+twist pole="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    f=~/.config/robbie/twist
+    case "{{ lowercase(pole) }}" in
+        "") cat "$f" 2>/dev/null || echo "CCW (default, not set)" ;;
+        cw|ccw) mkdir -p "$(dirname "$f")"; echo "{{ uppercase(pole) }}" > "$f"; echo "twist set to {{ uppercase(pole) }}" ;;
+        *) echo "usage: just twist [cw|ccw]" >&2; exit 1 ;;
+    esac
+
 # Start robbie_ros (systemd service)
 run:
 

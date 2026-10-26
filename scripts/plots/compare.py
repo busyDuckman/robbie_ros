@@ -337,7 +337,7 @@ def run(book, D):
     axes[1].legend(title="rod length", fontsize=8, title_fontsize=8, frameon=False, loc="upper left", bbox_to_anchor=(1.05, 1.0))
     book.save(fig, F_, "pitch_by_heading_by_rod_len", "Graceful pitch by head orientation, per rod length",
               f"Largest graceful pitch up and down for each head orientation on the platform, one line per rod length, at "
-              f"neck.yaml's jam ({cur_jam:g} deg) and twist.",
+              f"neck.yaml's jam ({cur_jam:g} deg), {D.twist_name} twist (the default). Head orientation is head.rotation_deg (0 = rod end 1).",
               title=f"Largest graceful pitch by head orientation, jam {cur_jam:g}\n"
                     "angle = head orientation (deg), distance = pitch (deg)")
 
@@ -346,8 +346,8 @@ def run(book, D):
                ["rod (mm) \\ jam", *(f"{j:g}" for j in jams)],
                [[f"{L:g}", *(f"{GU[L, j]['graceful', 'up'][0]:.1f} / {GU[L, j]['graceful', 'down'][0]:.1f}" for j in jams)]
                 for L in lens],
-               f"Each cell is the largest graceful pitch up / down (deg) with the head facing +X (orientation 0), for "
-               f"neck.yaml's twist ({D.twist_name}).")
+               f"Each cell is the largest graceful pitch up / down (deg) with the head at head.rotation_deg 0 (facing rod end 1), for "
+               f"the {D.twist_name} twist (the default).")
 
     # 20: same rod ends
     cur_angle = F["rod_end_bottom"][cur_li, cur_ji]

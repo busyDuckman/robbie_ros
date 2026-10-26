@@ -39,6 +39,7 @@ SETTLE = 800                          # sim steps after each move (settling was 
 
 spec = importlib.util.spec_from_file_location("gen", GEN); gen = importlib.util.module_from_spec(spec); spec.loader.exec_module(gen)
 BASE = yaml.safe_load(open(NECK))
+POLE = "CCW"                          # the old neck.yaml twist_sign +1; the pole is now set at runtime, not in neck.yaml
 
 
 def rest_height(cfg, jam):
@@ -50,7 +51,7 @@ def rest_height(cfg, jam):
 def model(jam):
     cfg = copy.deepcopy(BASE)
     cfg["platform"]["rest_height"] = rest_height(cfg, jam)
-    m = mujoco.MjModel.from_xml_string(gen.build(cfg))
+    m = mujoco.MjModel.from_xml_string(gen.build(cfg, POLE))
     # The sim's sled boxes aren't the sled.scad profile and jam at ~69 deg. MIN_GAP bounds the sweep instead.
     m.geom_contype[:] = 0
     m.geom_conaffinity[:] = 0
@@ -90,7 +91,8 @@ class Sim:
         self.cur = off
 
     def head(self):
-        return rpy(self.d.sensor("head_quat").data), self.d.sensor("head_pos").data.copy()
+        # the platform, +X forward: head_quat now follows head.rotation_deg, which these scripts predate
+        return rpy(self.d.body("platform").xquat), self.d.sensor("head_pos").data.copy()
 
 
 def sweep(args):

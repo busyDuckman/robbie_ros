@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
 """Builds the neck's MuJoCo model (MJCF) from config/neck.yaml.
 
-Usage: gen_neck_mjcf.py neck.yaml out.xml
+Usage: gen_neck_mjcf.py neck.yaml CW|CCW out.xml
 
-Run by the CMake build. The model is written in its rest pose (the stable pole, sleds at
-start_deg), so every joint's zero is that pose and the closed loop starts satisfied.
+Run by the CMake build, once per pole: CW or CCW twist, seen from above. The pole isn't in
+neck.yaml because the owner can turn the neck into either one by hand. The model is written in
+its rest pose (that pole, sleds at start_deg), so every joint's zero is that pose and the closed
+loop starts satisfied.
+
+The head faces head.rotation_deg on the platform: 0 is from the platform centre to rod end 1,
+CCW seen from above (docs/head_rotation.svg). The head site, and so the sim's head pose, is in
+that frame.
 
 The neck, as modelled:
   - Each sled is a hinge about the collar axis, driven by a position actuator.
@@ -56,7 +62,9 @@ def orbit_dir(deg):
     return [math.sin(a), -math.cos(a), 0.0]
 
 
-def build(cfg):
+def build(cfg, pole):
+    if pole not in ("CW", "CCW"):
+        raise ValueError(f"pole must be CW or CCW, not {pole!r}")
     g = cfg["gears"]
     sled, rod, plat = cfg["sled"], cfg["rod"], cfg["platform"]
     springs, rod_end = cfg["springs"], cfg["rod_end"]
@@ -69,8 +77,11 @@ def build(cfg):
     cos_twist = (rb ** 2 + rp ** 2 - chord_sq) / (2 * rb * rp)
     if chord_sq <= 0 or abs(cos_twist) > 1:
         sys.exit("neck.yaml: rod.length, the pivot radii and platform.rest_height don't fit together")
-    twist = math.copysign(math.degrees(math.acos(cos_twist)), plat["twist_sign"])
+    twist = math.copysign(math.degrees(math.acos(cos_twist)), 1 if pole == "CCW" else -1)
     z_top = z_pivot + height
+    # Head frame zero: the world angle of rod end 1 at rest (orbit_dir's 0 is -Y).
+    zero = sled["start_deg"][0] + twist - 90
+    facing = math.radians(zero + cfg["head"]["rotation_deg"])
 
     # Rod ends in the rest pose: bottom on the sled, top on the platform, twisted round by twist.
     bottoms, tops = [], []
@@ -98,6 +109,15 @@ def build(cfg):
     # platform up; much less and it hops between solutions.
     x.append('    <default class="rod_end"><joint type="hinge" armature="1e-3" damping="1e-4"/></default>')
     x.append("  </default>")
+    # For looks: a hexagonal platform with a rod end just outside the middle of every second edge
+    # (docs/head_rotation.svg). Edge middles sit hex_inset inside the rod-end centres.
+    hex_inset = 0.006
+    corner = (rp - hex_inset) / math.cos(math.radians(30))
+    verts = [fmt([corner * math.cos(math.radians(zero + 30 + 60 * k)), corner * math.sin(math.radians(zero + 30 + 60 * k)), z])
+             for z in (-0.004, 0.004) for k in range(6)]
+    x.append("  <asset>")
+    x.append(f'    <mesh name="platform" vertex="{" ".join(verts)}"/>')
+    x.append("  </asset>")
     x.append("  <worldbody>")
     # The base and the collar, for looks.
     x.append(f'    <geom name="base" type="cylinder" size="0.075 {cfg["collar_z"] / 2:.6g}"'
@@ -142,13 +162,23 @@ def build(cfg):
     # The platform floats; only the rods hold it. Its frame is level and centred at the rest pose.
     x.append(f'    <body name="platform" pos="0 0 {z_top:.6g}">')
     x.append('      <freejoint name="platform"/>')
-    x.append(f'      <geom name="platform" type="cylinder" size="{plat["radius"]} 0.004"'
-             f' mass="{plat["mass"]}" rgba="0.1 0.1 0.1 1"/>')
-    # Eyes, so the head's facing is visible. Forward is +X for now.
+    # Mass and inertia are a platform.radius cylinder, 8 mm thick, as before the shapes were added for looks.
+    r, h, m = plat["radius"], 0.008, plat["mass"]
+    x.append(f'      <inertial pos="0 0 0" mass="{m}" diaginertia="{m * (3 * r * r + h * h) / 12:.6g}'
+             f' {m * (3 * r * r + h * h) / 12:.6g} {m * r * r / 2:.6g}"/>')
+    x.append('      <geom name="platform" type="mesh" mesh="platform" density="0" rgba="0.45 0.45 0.5 1"/>')
+    # The head, rotated by head.rotation_deg from rod end 1: a thin disk on the platform with the eyes on
+    # it and a stripe marking forward, and the head site. The disk and stripe are massless, for looks.
+    x.append(f'      <body name="head" quat="{math.cos(facing / 2):.6g} 0 0 {math.sin(facing / 2):.6g}">')
+    x.append(f'        <geom name="head_disk" type="cylinder" size="{plat["radius"]} 0.0015" pos="0 0 0.0055"'
+             ' density="0" rgba="0.8 0.8 0.85 0.35"/>')
+    x.append(f'        <geom name="head_forward" type="box" size="{plat["radius"] / 2:.6g} 0.002 0.0001"'
+             f' pos="{plat["radius"] / 2:.6g} 0 0.0071" density="0" rgba="0.92 0.41 0.2 1"/>')
     for side, y in (("left", 0.02), ("right", -0.02)):
-        x.append(f'      <geom name="eye_{side}" type="cylinder" size="0.016 0.003" pos="0.03 {y} 0.025"'
+        x.append(f'        <geom name="eye_{side}" type="cylinder" size="0.016 0.003" pos="0.03 {y} 0.025"'
                  ' euler="0 1.5708 0" mass="0.001" rgba="1 1 1 1"/>')
-    x.append('      <site name="head" pos="0 0 0" size="0.004"/>')
+    x.append('        <site name="head" pos="0 0 0" size="0.004"/>')
+    x.append("      </body>")
     x.append("    </body>")
     x.append("  </worldbody>")
 
@@ -187,12 +217,12 @@ def build(cfg):
 
 
 def main():
-    if len(sys.argv) != 3:
+    if len(sys.argv) != 4 or sys.argv[2] not in ("CW", "CCW"):
         sys.exit(__doc__.splitlines()[2])
     with open(sys.argv[1]) as f:
         cfg = yaml.safe_load(f)
-    xml = build(cfg)
-    with open(sys.argv[2], "w") as f:
+    xml = build(cfg, sys.argv[2])
+    with open(sys.argv[3], "w") as f:
         f.write(xml)
 
 

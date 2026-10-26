@@ -13,9 +13,11 @@ F_ = "this_robbie"
 UP = ["#9ecae1", "#4292c6", "#08306b"]     # tight to loose
 DOWN = ["#fdae6b", "#f16913", "#8c2d04"]
 SEQ_BLUES = matplotlib.colors.LinearSegmentedColormap.from_list("blues", plt.get_cmap("Blues")(np.linspace(0.3, 1.0, 256)))   # palest step still clear of white
-SLED_ABOUT = "Over the sled offsets sled_1 and sled_2 (sled_3 = -(sled_1 + sled_2)), neck.yaml's twist, pass A. "
-HEAD_ABOUT = ("Head orientation is the direction the head faces on the platform (0 = +X, counter-clockwise from the top); "
-              "pitch is the elevation of the head's forward axis and roll the elevation of its left axis. ")
+SLED_ABOUT = "Over the sled offsets sled_1 and sled_2 (sled_3 = -(sled_1 + sled_2)), CCW twist (the default), pass A. "
+HEAD_ABOUT = ("Head orientation is head.rotation_deg, the direction the head faces on the platform: 0 is centre to rod end 1, "
+              "counter-clockwise from the top (docs/head_rotation.svg); "
+              "pitch is the elevation of the head's forward axis and roll the elevation of its left axis. Green line: "
+              "neck.yaml's head.rotation_deg. ")
 
 
 def run(book, D):
@@ -24,10 +26,14 @@ def run(book, D):
     axis = np.arange(-LIM, LIM + 1)
     R = D.robbie                      # {"CW"|"CCW": (pass a, pass b, checks)}
     ORDER = [d for d in ("CW", "CCW") if d in R]
-    YD = D.twist_name                 # neck.yaml's twist
-    LABEL = {d: f"{d}" + (" (neck.yaml)" if d == YD else " (other twist)") for d in ORDER}
-    A = R[YD][0]
+    YD = D.twist_name                 # the default twist, CCW
+    LABEL = {d: f"{d}" + (" (default)" if d == YD else "") for d in ORDER}
+    # R is in the rod-end-1 frame (heading charts read as head.rotation_deg); HF is the head's own frame
+    ROT = D.head_rot
+    HF = {d: common.to_frame(R[d][0], ROT) for d in ORDER}
+    A = HF[YD]
     start = D.start
+    Z = {d: R[d][2]["head_zero_deg"] for d in ORDER}   # world angle of rod end 1 at rest
 
     def grid(a, key):
         g = np.full((N, N), np.nan)
@@ -61,12 +67,12 @@ def run(book, D):
     for ax in axes[1:]:
         ax.set_ylabel("")
     book.save(fig, F_, "roll_pitch_off", "Roll, pitch and off centre",
-              SLED_ABOUT + "Head roll and pitch (world frame, ZYX Euler) and off centre side by side.",
+              SLED_ABOUT + "Head roll and pitch (head frame at head.rotation_deg, ZYX Euler) and off centre side by side.",
               title="Roll, pitch and off centre")
 
     # ---------------------------------------------------------------- 2-5 each field
-    for key, title, unit, div, step, what in [("roll", "Head roll", "deg", True, 2, "Head roll (world frame, ZYX Euler)."),
-                                              ("pitch", "Head pitch", "deg", True, 2, "Head pitch (world frame, ZYX Euler)."),
+    for key, title, unit, div, step, what in [("roll", "Head roll", "deg", True, 2, "Head roll (head frame at head.rotation_deg, ZYX Euler)."),
+                                              ("pitch", "Head pitch", "deg", True, 2, "Head pitch (head frame at head.rotation_deg, ZYX Euler)."),
                                               ("yaw", "Head yaw (residual)", "deg", True, 5, "Head yaw that comes with each sled setting."),
                                               ("off", "Off centre", "mm", False, 2, "Distance of the platform centre from the neck axis.")]:
         fig, ax = plt.subplots(figsize=(6.4, 5.6), constrained_layout=True)
@@ -101,7 +107,7 @@ def run(book, D):
     ax.legend(loc="lower right", fontsize=8, frameon=False)
     ax.set_xlabel("roll (deg)"); ax.set_ylabel("pitch (deg)"); ax.set_aspect("equal"); ax.grid(color="#e6e6e6", lw=0.5)
     book.save(fig, F_, "sled_grid_in_roll_pitch", "Sled grid in roll/pitch",
-              "Lines of constant sled_1 and constant sled_2 (every 4 deg) mapped into head roll and pitch, neck.yaml's twist.",
+              "Lines of constant sled_1 and constant sled_2 (every 4 deg) mapped into head roll and pitch (head frame), CCW twist (the default).",
               title="The sled_1/sled_2 grid mapped into roll/pitch\n"
                     "where the grid overlaps itself, a roll/pitch has more than one sled solution")
 
@@ -219,20 +225,26 @@ def run(book, D):
     # ---------------------------------------------------------------- pitch by head orientation
     heads = np.radians(np.arange(0, 361))
 
+    HEAD_COLOUR = SERIES[5]
+
     def joint_lines(ax, d, R_, nod=False, tops_style="--"):
+        """Sled pivots, rod top pivots, nod lines and the head (head.rotation_deg), in the rod-end-1 frame."""
         orbit = R[d][2]["orbit_deg"]   # measured in the sim at rest, CCW positive
         for i, (st, ob) in enumerate(zip(start, orbit), 1):
-            lines = [(st - 90, "#444444", "-", "sled"), (st + ob - 90, "#444444", tops_style, "top")]
+            lines = [(st - 90 - Z[d], "#444444", "-", "sled"), (st + ob - 90 - Z[d], "#444444", tops_style, "top")]
             if nod:
-                lines.append((st + ob / 2 - 90, "#d62728", "-", "nod"))
+                lines.append((st + ob / 2 - 90 - Z[d], "#d62728", "-", "nod"))
             for a_, colour, ls, name in lines:
                 ax.plot([np.radians(a_)] * 2, [0, R_], color=colour, lw=1.4 if name == "nod" else 1.0, ls=ls)
                 ax.text(np.radians(a_), R_ * 0.93, f"{name} {i}", fontsize=7, color=colour, ha="center", va="center",
                         bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none"))
+        ax.plot([np.radians(ROT)] * 2, [0, R_], color=HEAD_COLOUR, lw=2.0)
+        ax.text(np.radians(ROT), R_ * 0.8, "head", fontsize=7, color=HEAD_COLOUR, ha="center", va="center",
+                bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none"))
 
     def nods(d):
-        """Nod line orientations (deg, 0-360): halfway round each rod's twist from its sled pivot, at rest."""
-        return [(st + ob / 2 - 90) % 360 for st, ob in zip(start, R[d][2]["orbit_deg"])]
+        """Nod line orientations (deg, 0-360, rod-end-1 frame): halfway round each rod's twist from its sled pivot, at rest."""
+        return [(st + ob / 2 - 90 - Z[d]) % 360 for st, ob in zip(start, R[d][2]["orbit_deg"])]
 
     NOD_LS = {"CW": "-", "CCW": "--"}
 
@@ -240,6 +252,7 @@ def run(book, D):
         for d in twists:
             for h in nods(d):
                 ax.axvline(h, color="#d62728", lw=1.0, ls=NOD_LS[d], zorder=0)
+        ax.axvline(ROT % 360, color=HEAD_COLOUR, lw=2.0, zorder=0)
 
     def polar(ax, R_):
         ax.set_ylim(0, R_); ax.set_rlabel_position(200); ax.tick_params(axis="y", labelsize=7)
@@ -317,9 +330,10 @@ def run(book, D):
               "twist on the top row, CCW below (viewed from the top). Grey lines: sled pivots (solid) and rod top pivots "
               "(dashed) at rest, measured in the sim; red: nod lines.",
               title="Largest pitch by head orientation on the platform\nangle = head orientation (deg), distance = pitch (deg)")
-    book.table(F_, "Pitch at head orientation 0 (table)", ["Twist", "Up (graceful)", "Down (graceful)", "Up (ugly)", "Down (ugly)"],
-               [[LABEL[d], *(f"{GU[d][k, w][0]:.1f} deg" for k in ("graceful", "ugly") for w in ("up", "down"))] for d in ORDER],
-               "Largest pitch with the head facing +X (orientation 0), from the chart above.")
+    hi = int(round(ROT)) % 360
+    book.table(F_, "Pitch at neck.yaml's head orientation (table)", ["Twist", "Up (graceful)", "Down (graceful)", "Up (ugly)", "Down (ugly)"],
+               [[LABEL[d], *(f"{GU[d][k, w][hi]:.1f} deg" for k in ("graceful", "ugly") for w in ("up", "down"))] for d in ORDER],
+               f"Largest pitch with the head at head.rotation_deg = {ROT:g}, from the chart above.")
     book.csv(F_, "pitch_by_head_orientation.csv", ["orientation_deg", *(f"{d.lower()}_{k}_{w}" for d in ORDER for k in ("graceful", "ugly") for w in ("up", "down"))],
              [[h, *(round(GU[d][k, w][h], 3) for d in ORDER for k in ("graceful", "ugly") for w in ("up", "down"))] for h in range(360)])
 
@@ -328,7 +342,7 @@ def run(book, D):
               ("yaw", "Head yaw (residual)", "deg", True, 5), ("off", "Off centre", "mm", False, 2)]
     fig, axes = plt.subplots(len(FIELDS), len(ORDER), figsize=(5.25 * len(ORDER), 4.6 * len(FIELDS)), constrained_layout=True, squeeze=False)
     for ri, (key, title, unit, div, step) in enumerate(FIELDS):
-        gs = {d: grid(R[d][0], key) for d in ORDER}
+        gs = {d: grid(HF[d], key) for d in ORDER}
         v = max(np.abs(g).max() for g in gs.values())
         for ci, d in enumerate(ORDER):
             ax, g = axes[ri, ci], gs[d]
@@ -342,15 +356,15 @@ def run(book, D):
               title="Roll, pitch, yaw and off centre over (sled_1, sled_2), CW and CCW viewed from the top")
 
     fig, axes = plt.subplots(1, len(ORDER), figsize=(5.5 * len(ORDER), 5.4), constrained_layout=True, sharex=True, sharey=True, squeeze=False)
-    vmax = max(np.percentile(R[d][0][:, COLS["off"]], 99.5) for d in ORDER)
+    vmax = max(np.percentile(HF[d][:, COLS["off"]], 99.5) for d in ORDER)
     for ax, d in zip(axes[0], ORDER):
-        a = R[d][0]
+        a = HF[d]
         sc = common.off_scatter(ax, a, vmax)
         ax.set_title(LABEL[d], fontsize=9); ax.set_aspect("equal"); ax.grid(color="#e6e6e6", lw=0.5)
         ax.set_xlabel("roll (deg)"); ax.set_ylabel("pitch (deg)")
     common.off_colorbar(fig, sc, axes, shrink=0.8, label="off centre (mm), colour clipped at the 99.5th percentile")
     book.save(fig, F_, "roll_pitch_coverage_cw_ccw", "Roll/pitch coverage, both twists",
-              "Every pass A sweep point at its head roll and pitch (world frame), coloured by off centre, one panel per twist. "
+              "Every pass A sweep point at its head roll and pitch (head frame at head.rotation_deg), coloured by off centre, one panel per twist. "
               "Blue: off centre within the graceful limit (10 mm), orange: beyond it; the bluer points are drawn on top.",
               title="Roll vs pitch at every sweep point, CW and CCW viewed from the top, pass A")
 
@@ -397,7 +411,7 @@ def run(book, D):
             ax.set_title(f"Pitch {way}, |roll| <= {rt:g} deg and off <= {ot:g} mm", fontsize=9)
             ax.set_ylabel(f"largest pitch {way} (deg)\nhigher is better"); tidy(ax)
     for ax in axes[-1]:
-        ax.set_xlabel("head orientation on the platform (deg, 0 = +X)")
+        ax.set_xlabel("head orientation, head.rotation_deg (deg, 0 = rod end 1)")
     h_, l_ = axes[0, 1].get_legend_handles_labels()
     h_ += [plt.Line2D([], [], color="#d62728", lw=1.0, ls=NOD_LS[d]) for d in ORDER]
     l_ += [f"nod lines, {LABEL[d]}" for d in ORDER]
@@ -417,7 +431,7 @@ def run(book, D):
             nod_vlines(ax, ORDER)
             ax.set_xlim(0, 360); ax.set_xticks(range(0, 361, 30)); tidy(ax)
             ax.set_title(f"Pitch {way}: CCW minus CW at the same head orientation", fontsize=9)
-            ax.set_xlabel("head orientation on the platform (deg, 0 = +X)")
+            ax.set_xlabel("head orientation, head.rotation_deg (deg, 0 = rod end 1)")
         axes[0].set_ylabel("deg (above 0: CCW reaches further,\nbelow 0: CW reaches further)")
         h_, l_ = axes[1].get_legend_handles_labels()
         h_ += [plt.Line2D([], [], color="#d62728", lw=1.0, ls=NOD_LS[d]) for d in ORDER]
@@ -428,14 +442,14 @@ def run(book, D):
                   "vertical lines: each twist's nod lines.",
                   title="Largest pitch, CCW minus CW viewed from the top, at each head orientation\ndotted: zero, context")
 
-    # poses for the renders: rest, largest graceful pitch up and down with the head along nod line 1
+    # poses for the renders: rest, largest graceful pitch up and down with the head at head.rotation_deg.
+    # heading and nods are in the rod-end-1 frame; zero turns them to the platform frame the renders draw in.
     poses = []
     for d in ORDER:
-        h = int(round(nods(d)[0])) % 360
         hp, hr, off = HB[d]; a = R[d][0]
         ok = (np.abs(hr) <= 1) & (off <= 10)
         r0 = int(np.flatnonzero((a[:, 1] == 0) & (a[:, 2] == 0))[0])
-        for pose, i in (("rest", r0), ("largest graceful pitch up", int(np.where(ok, hp, -np.inf).argmax(axis=1)[h])),
-                        ("largest graceful pitch down", int(np.where(ok, -hp, -np.inf).argmax(axis=1)[h]))):
-            poses.append(dict(direction=d, heading=h, pose=pose, sleds=[float(v) for v in a[i, 1:4]], nods=nods(d)))
+        for pose, i in (("rest", r0), ("largest graceful pitch up", int(np.where(ok, hp, -np.inf).argmax(axis=1)[hi])),
+                        ("largest graceful pitch down", int(np.where(ok, -hp, -np.inf).argmax(axis=1)[hi]))):
+            poses.append(dict(direction=d, heading=hi, zero=Z[d], pose=pose, sleds=[float(v) for v in a[i, 1:4]], nods=nods(d)))
     return poses
