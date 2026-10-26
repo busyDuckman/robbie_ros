@@ -28,7 +28,12 @@ robbie_dir="$(cd "$repo_root/.." && pwd)/robbie"
 if [ -d "$robbie_dir/.git" ]; then
     echo "Found $robbie_dir"
 elif ask "robbie isn't checked out at $robbie_dir. Clone it now?"; then
-    git clone git@github.com:busyDuckman/robbie.git "$robbie_dir"   # private repo, so SSH
+    read -r -p "Clone over HTTPS or SSH? [https/ssh]: " proto || true
+    case "$proto" in
+        ssh|SSH) url=git@github.com:busyDuckman/robbie.git ;;
+        *)       url=https://github.com/busyDuckman/robbie.git ;;
+    esac
+    git clone "$url" "$robbie_dir"
 else
     die "robbie is needed at $robbie_dir (robbie_interfaces). The dev container mounts it."
 fi

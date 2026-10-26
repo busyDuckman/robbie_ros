@@ -68,6 +68,43 @@ def rod_end_angles(cfg):
     return abs(math.degrees(math.asin(d @ ub))), abs(math.degrees(math.asin(d @ ut)))
 
 
+def jam_for_rod_end(cfg, max_deg):
+    """Jam (deg) at which the larger rod-end angle at rest reaches max_deg; it grows with jam. None if out of reach."""
+    lo, hi = 1.0, 179.0
+    try:
+        if not max(rod_end_angles(with_jam(cfg, lo))) <= max_deg <= max(rod_end_angles(with_jam(cfg, hi))):
+            return None
+    except ValueError:   # the rod can't span that twist
+        return None
+    for _ in range(60):
+        mid = (lo + hi) / 2
+        lo, hi = (mid, hi) if max(rod_end_angles(with_jam(cfg, mid))) < max_deg else (lo, mid)
+    return (lo + hi) / 2
+
+
+def pivot_z(cfg):
+    """Height (m) of the sled pivots above the table."""
+    return cfg["collar_z"] + cfg["sled"]["pivot_height"]
+
+
+def nod_lines(cfg, pole):
+    """head.rotation_deg of the three nod lines at rest: halfway round each rod's twist, so -twist/2 + 120 k."""
+    twist = jam_of(cfg) * (1 if pole == "CCW" else -1)
+    return [(-twist / 2 + 120 * k + 180) % 360 - 180 for k in range(3)]
+
+
+def spring_rest_len(cfg):
+    """Distance (m) between neighbouring spring mounts at rest; the same for all three. As gen_neck_mjcf.py."""
+    rb, rp, h = cfg["sled"]["pivot_radius"], cfg["platform"]["pivot_radius"], cfg["platform"]["rest_height"]
+    a = math.radians(jam_of(cfg))
+    f = cfg["springs"]["from_top"] / cfg["rod"]["length"]
+
+    def mount(k):   # from_top along rod k from its top pivot
+        top = np.array([rp * math.cos(a + k), rp * math.sin(a + k), h])
+        return top + f * (np.array([rb * math.cos(k), rb * math.sin(k), 0]) - top)
+    return float(np.linalg.norm(mount(2 * math.pi / 3) - mount(0)))
+
+
 def feasible(s1, s2):
     s3 = -s1 - s2
     return min(120 + s2 - s1, 120 + s3 - s2, 120 + s1 - s3) >= MIN_GAP
@@ -150,12 +187,17 @@ def _rounded(v):
     return v
 
 
+def _without(cfg, sec, k):
+    return {**cfg, sec: {x: v for x, v in cfg[sec].items() if x != k}} if sec in cfg else cfg
+
+
 with open(GEN, "rb") as _f:
     GEN_HASH = hashlib.sha256(_f.read()).hexdigest()
 
 
 def key(kind, cfg, extra=None):
     cfg = {k: v for k, v in cfg.items() if k != "head"}   # the sweeps are in the platform frame; see Sim.head
+    cfg = _without(_without(cfg, "rod_end", "max_angle_deg"), "platform", "measured_height")   # just config's checks only
     blob = json.dumps({"kind": kind, "cfg": _rounded(cfg), "extra": extra, "settings": SETTINGS, "gen": GEN_HASH,
                        "mujoco": mujoco.__version__}, sort_keys=True)
     return f"{kind}_{hashlib.sha256(blob.encode()).hexdigest()[:16]}"
@@ -207,18 +249,20 @@ def _cal(job):
     return [jam, round(sim.height_mm(), 3)]
 
 
-def ensure_sweeps(cache, jobs, procs=30):
-    """jobs: {name: (cfg, pass)}. Runs the missing ones. Returns {name: (array, checks)}."""
+def ensure_sweeps(cache, jobs, procs=30, log=None, pool=Pool):
+    """jobs: {name: (cfg, pass)}. Runs the missing ones. Returns {name: (array, checks)}.
+    log(text, done, total) gets progress (default: print); pool makes the process pool (the GUI spawns)."""
+    log = log or (lambda text, done, total: print(text, flush=True))
     os.makedirs(cache, exist_ok=True)
     paths = {n: os.path.join(cache, key(f"sweep_{p}", cfg) + ".csv") for n, (cfg, p) in jobs.items()}
     todo = sorted({paths[n]: (cfg, p, paths[n]) for n, (cfg, p) in jobs.items() if not os.path.exists(paths[n])}.values(),
                   key=lambda j: j[2])
-    print(f"sweeps: {len(set(paths.values()))} needed, {len(todo)} to run", flush=True)
+    log(f"sweeps: {len(set(paths.values()))} needed, {len(todo)} to run", 0, len(todo))
     if todo:
         t0 = time.time()
-        with Pool(min(procs, len(todo))) as pool:
-            for n, path in enumerate(pool.imap_unordered(_sweep, todo), 1):
-                print(f"sweep {n}/{len(todo)} done ({os.path.basename(path)}), {time.time() - t0:.0f} s", flush=True)
+        with pool(min(procs, len(todo))) as p:
+            for n, path in enumerate(p.imap_unordered(_sweep, todo), 1):
+                log(f"sweep {n}/{len(todo)} done ({os.path.basename(path)}), {time.time() - t0:.0f} s", n, len(todo))
     out = {}
     for n, path in paths.items():
         with open(path) as f:

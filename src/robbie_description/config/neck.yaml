@@ -28,6 +28,8 @@ rod:
 platform:
   pivot_radius: 0.040     # measured: rod-end centre from the platform centre
   rest_height: 0.070      # measured (rough): sled pivots to platform pivots, at rest. Sets the twist.
+  measured_height:        # measured, optional: table to a top rod-end centre, at rest. just config checks
+                          # rest_height against it, or sets rest_height from it.
   radius: 0.045           # estimate: for drawing only
   mass: 0.25              # estimate: platform, Pi and eyes. Not critical.
 
@@ -41,6 +43,8 @@ head:
 # either one by hand. robbie_ros is told at runtime (just up --cw in the sim, just twist on the Pi).
 rod_end:
   untwist_deg: 40         # estimate: how far a rod end can swivel back from the jam
+  max_angle_deg:          # spec sheet, optional: how far the ball tilts in its housing. just config checks the
+                          # jam against it, or sets rest_height from it.
 
 springs:                  # extension springs between neighbouring rods
   from_top: 0.030         # measured: mount point, along the rod from the top pivot

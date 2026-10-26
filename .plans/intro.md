@@ -13,11 +13,11 @@ A small robot called Robbie, is built in three layers:
 
 
 Relevant works (read only for the scope of this project)
-  - Umbrella project: C:\Users\duckman\git_personal\robbie
-  - 3D printable parts and assembly: C:\Users\duckman\git_personal\robbie_openscad
-  - Eye graphics rendering, other bits and pieces: C:\Users\duckman\git_personal\robbie_restoration
-  - Look around behaviour: C:\Users\duckman\git_personal\lookaround
-  - robbie_ros (this, project, known as Layer C by the umbrella proj): C:\Users\duckman\git_personal\robbie_ros
+  - Umbrella project: robbie repo
+  - 3D printable parts and assembly: robbie_openscad repo
+  - Eye graphics rendering, other bits and pieces: robbie_restoration repo
+  - Look around behaviour: lookaround repo
+  - robbie_ros (this, project, known as Layer C by the umbrella proj): robbie_ros repo
 
 
 #  What is robbie_ros (probably)
@@ -179,8 +179,8 @@ hardware. Thats not may or man not be related to the robot simulator this projec
 - 3 rods and 3 springs. Each spring joins two neighbouring rods at about their midpoints,
   making a ring of springs. Each rod has a ball-joint rod end at both ends: one on its sled,
   one on the platform. The rods lean and cross past each other.
-- Photos: `docs/referencw_potos/platform_assembly.jpg` (the bare neck) and
-  `docs/referencw_potos/pi_position.jpg` (the Pi and eyes mounted on the platform).
+- Photos: `docs/reference_photos/platform_assembly.jpg` (the bare neck) and
+  `docs/reference_photos/pi_position.jpg` (the Pi and eyes mounted on the platform).
 - It looks visually similar to a 3-strut tensegrity prism, but it is NOT one. Don't reason
   about it as a tensegrity.
 - This is a reimplementation of a mechanism that was built years ago and works. Its behaviour

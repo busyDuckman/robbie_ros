@@ -6,6 +6,7 @@ on:
     paths: &paths
       - "src/robbie_description/**"
       - "scripts/plots/**"
+      - "scripts/config/**"
       - "justfile"
       - ".github/workflows/test.yml"
   pull_request:

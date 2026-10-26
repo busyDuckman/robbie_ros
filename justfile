@@ -34,7 +34,7 @@ build:
 
 # Basic unit test run (also what CI runs: .github/workflows/test.yml)
 test:
-    uv run --python 3.12 --with mujoco==3.12.0 --with numpy --with pyyaml --with matplotlib --with pytest pytest -q scripts/plots
+    uv run --python 3.12 --with mujoco==3.12.0 --with numpy --with pyyaml --with matplotlib --with pytest pytest -q scripts/plots scripts/config
 
 # Full testing, including sim runs (homing, pose-to-sled, unwinding)
 vet: test
@@ -99,6 +99,10 @@ up *flags: down build
 # stop everything started by just up
 down:
     @docker rm -f {{ _sim_container }} >/dev/null 2>&1 || true
+
+# Set up neck.yaml for your Robbie, in a window: measurements, checks, which twist looks up, and the charts
+config:
+    uv run scripts/config/neck_setup.py
 
 # Populate .plots/ with the neck kinematics plots (sweeps the sim when neck.yaml changes); see .plots/plots.md
 plot:

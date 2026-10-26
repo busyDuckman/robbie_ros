@@ -1,8 +1,8 @@
 # robbie_ros
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Status: planning](https://img.shields.io/badge/status-early%20planning-orange)](#)
-[![TRL 3](https://img.shields.io/badge/TRL-2-lightgrey)](https://en.wikipedia.org/wiki/Technology_readiness_level)
+[![Status: proof of concept](https://img.shields.io/badge/status-proof%20of%20concept-orange)](#)
+[![TRL 3](https://img.shields.io/badge/TRL-3-lightgrey)](https://en.wikipedia.org/wiki/Technology_readiness_level)
 [![ROS 2 Jazzy](https://img.shields.io/badge/ROS%202-Jazzy-22314E?logo=ros&logoColor=white)](https://docs.ros.org/en/jazzy/)
 [![MuJoCo](https://img.shields.io/badge/sim-MuJoCo-0b5fff)](https://mujoco.org/)
 [![Rerun](https://img.shields.io/badge/viz-Rerun-5c2d91)](https://rerun.io/)
@@ -90,8 +90,8 @@ Simulation:
 These photos are quite old; this repo is a re-implementation (using modern tools) of a device I made quite a few years ago.
 
 <p>
-  <img src="docs/referencw_potos/platform_assembly.jpg" alt="The neck: three sleds, rods and springs under the head platform" width="300">
-  <img src="docs/referencw_potos/pi_position.jpg" alt="The Pi and eyes mounted on the head platform" width="300">
+  <img src="docs/reference_photos/platform_assembly.jpg" alt="The neck: three sleds, rods and springs under the head platform" width="300">
+  <img src="docs/reference_photos/pi_position.jpg" alt="The Pi and eyes mounted on the head platform" width="300">
 </p>
 
 Assembly animation (from [robbie_openscad]):
@@ -105,7 +105,7 @@ Assembly animation (from [robbie_openscad]):
 The simulation uses MuJoCo for physics and Rerun for visualisation and logging. It plugs in at the
 hardware driver, so everything above the driver is the same code in sim and on the Pi.
 
-<img src="docs/referencw_potos/simulator.jpg" alt="The neck in the MuJoCo viewer" width="600">
+<img src="docs/reference_photos/simulator.jpg" alt="The neck in the MuJoCo viewer" width="600">
 
 From Linux or a WSL shell, after `just setup`:
 
@@ -117,7 +117,7 @@ just down            # stop the simulation (don't just close the window)
 
 `just up` also opens a small GUI for driving the robot's joints, etc.
 
-<img src="docs/referencw_potos/pose_in_simulation.jpg" alt="A posed neck in the simulation" width="600">
+<img src="docs/reference_photos/pose_in_simulation.jpg" alt="A posed neck in the simulation" width="600">
 
 **Notes**
 
@@ -179,7 +179,9 @@ to tune in the rod length and the jam angle of the sled linkage.
 
 **Note:** What follows is a generalised analysis aimed at helping people build a working Robbie, with the linkages they purchased and whatever modifications they choose. At a pragmatic level the statements are broadly true, and quite useful.
 
-**Want these charts for a custom Robbie?** Edit [neck.yaml], then run `just plot`. Plots are saved to `.plots/` after the simulation finishes.
+**Want these charts for a custom Robbie?**, two options:
+  - Edit [neck.yaml], then run `just plot`. Plots are saved to `.plots/` after the simulation finishes.
+  - or; run "just config" and go through the tabs.
 
 ### 5.2 What is the available movement?
 As you might expect, the movement limits have a 3-fold rotational symmetry.
@@ -253,7 +255,24 @@ _(Each cell is the graceful up / down in degrees.)_
 The [lookaround] controller works well with this. It can set the preferred movement range of a neck, and use the eyes to give Robbie a good gaze, only going into the _ugly_ mode if the eyes are at full extent.
 
 ### 5.6 Putting it all together
-(under construction)
+
+First, **thanks for still being here**, those last few pages were a bit heavy.
+
+Configuring your Robbie means making the neck.yaml file.
+
+Rather than try and figure it out from the theory (above), there is a util that can take care of it. Run `just config`. If you don't know your rod jam limits (quite likely), you can measure the resting pose and this util will back-calculate it. You can also use the tabs to see the same charts we just discussed. So long as you could get the gist of what was covered here, you should be fine with the config util.
+
+> [!NOTE]
+> The last thing you need to do is hit the "find best" button and get the angle from the "head" arrow. Then hit save. Put that value in into the OpenSCAD settings before printing the head.
+
+<img src="docs/reference_photos/config_gui.png" alt="The neck setup window (just config)" width="900">
+
+In robbie_commons.scad
+ 
+    // from config util
+    head_rotation = 20.0;
+
+
 
 ## 6.0 Inverse kinematics
 (under construction)
@@ -277,4 +296,4 @@ That's all folks.
 [robbie_restoration]: https://github.com/busyDuckman/robbie_restoration
 [lookaround]: https://github.com/busyDuckman/look_around
 [neck.yaml]: src/robbie_description/config/neck.yaml
-[random_thoughts_on_the_ik.md]: .plans/random_thoughts_on_the_ik.md
+

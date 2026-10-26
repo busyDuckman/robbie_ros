@@ -30,7 +30,7 @@ Against:
 - It teaches less of the job-relevant skill.
 - The control loop, timing and controller switching would all be hand-rolled.
 
-**Leaning:** ros2_control, because of the job-skills goal and because `mujoco_ros2_control` already exists. The cost is C++ plugins and fitting homing in as a custom controller.
+**Leaning:** ros2_control, because it is the standard ROS 2 way to drive hardware, and because `mujoco_ros2_control` already exists. The cost is C++ plugins and fitting homing in as a custom controller.
 
 
 ANSWER: ros2_control, just because I am very curious to see how this works. Kinda the point of a hobby proj sometimes.
