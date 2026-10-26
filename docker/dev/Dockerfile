@@ -29,6 +29,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN apt-get update && apt-get install -y --no-install-recommends xdotool \
     && rm -rf /var/lib/apt/lists/*
 
+# Software Vulkan (lavapipe) for the Rerun viewer. On software OpenGL it exits at startup
+# ("Adapter does not support drawing to texture format R32Float").
+RUN apt-get update && apt-get install -y --no-install-recommends mesa-vulkan-drivers libvulkan1 \
+    && rm -rf /var/lib/apt/lists/*
+ENV WGPU_BACKEND=vulkan
+
 # Run as the host user's UID/GID, so files written to the mounted repo aren't owned by root.
 # Ubuntu 24.04 images ship an 'ubuntu' user on UID 1000, so it goes first.
 RUN (userdel -r ubuntu 2>/dev/null || true) \
@@ -45,8 +51,12 @@ USER dev
 # so rclpy and colcon are still importable.
 COPY --chown=dev:dev scripts/setup/requirements.txt /tmp/requirements.txt
 RUN uv venv --system-site-packages /opt/venv \
-    && uv pip install --no-cache --python /opt/venv/bin/python -r /tmp/requirements.txt
+    && uv pip install --no-cache --python /opt/venv/bin/python -r /tmp/requirements.txt \
+    # Rerun sends anonymous usage data unless told not to (rerun analytics details)
+    && /opt/venv/bin/rerun analytics disable
 ENV PATH="/opt/venv/bin:$PATH"
+# ROS 2 nodes start with /usr/bin/python3, not the venv's; this lets them import rerun and lookaround.
+ENV PYTHONPATH="/opt/venv/lib/python3.12/site-packages"
 
 RUN rosdep update \
     && echo 'source /opt/ros/jazzy/setup.bash' >> ~/.bashrc \

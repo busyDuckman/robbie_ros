@@ -78,14 +78,19 @@ stop:
 
 # (re-)start the MuJoCo sim, the neck poser window, the Rerun viewer and robbie_ros against the sim
 #  --headless to not show the simulator window, --cw to start in the CW pole (default --ccw)
+#  Rerun goes where ROBBIE_RERUN (.env, from just setup) says; --headless with a local viewer records to .output/rerun/
 up *flags: down build
     #!/usr/bin/env bash
     set -euo pipefail
-    headless=false poser=true twist=ccw
+    [ -f .env ] && . ./.env
+    headless=false poser=true twist=ccw rerun="${ROBBIE_RERUN:-local}"
     [[ " {{ flags }} " == *" --headless "* ]] && headless=true poser=false
     [[ " {{ flags }} " == *" --cw "* ]] && twist=cw
+    if [ "$headless" = true ] && [ "$rerun" = local ]; then
+        rerun="/ws/robbie_ros/.output/rerun/sim_$(date +%Y%m%d_%H%M%S).rrd"
+    fi
     {{ _compose_dev }} run -d --name {{ _sim_container }} dev bash scripts/dev/ros.sh \
-        ros2 launch robbie_bringup sim.launch.py headless:=$headless poser:=$poser twist:=$twist >/dev/null
+        ros2 launch robbie_bringup sim.launch.py headless:=$headless poser:=$poser twist:=$twist rerun:=$rerun >/dev/null
     for i in $(seq 1 30); do
         if docker logs {{ _sim_container }} 2>&1 | grep -q "Configured and activated head_pose_broadcaster"; then
             [ "$headless" = true ] || docker exec {{ _sim_container }} bash scripts/dev/size_window.sh {{ _sim_window }}
@@ -98,6 +103,7 @@ up *flags: down build
 
 # stop everything started by just up
 down:
+    @docker stop -s INT -t 10 {{ _sim_container }} >/dev/null 2>&1 || true   # as Ctrl-C: ros2 launch ignores SIGTERM as PID 1. Lets Rerun finish its .rrd
     @docker rm -f {{ _sim_container }} >/dev/null 2>&1 || true
 
 # Set up neck.yaml for your Robbie, in a window: measurements, checks, which twist looks up, and the charts

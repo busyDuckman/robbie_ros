@@ -117,6 +117,11 @@ just down            # stop the simulation (don't just close the window)
 
 `just up` also opens a small GUI for driving the robot's joints, etc.
 
+It also logs the neck to Rerun: the linkage and nod lines in 3D, with head roll/pitch/yaw, off centre and the sleds
+over sim time. `just setup` asks where the viewer is (`ROBBIE_RERUN` in `.env`): `local` runs one in the dev
+container, or give the `host:port` of your own (same version as `rerun-sdk` in [requirements.txt]). With
+`--headless`, a local viewer is replaced by a recording in `.output/rerun/`.
+
 <img src="docs/reference_photos/pose_in_simulation.jpg" alt="A posed neck in the simulation" width="600">
 
 **Notes**
@@ -263,7 +268,7 @@ Configuring your Robbie means making the neck.yaml file.
 Rather than try and figure it out from the theory (above), there is a util that can take care of it. Run `just config`. If you don't know your rod jam limits (quite likely), you can measure the resting pose and this util will back-calculate it. You can also use the tabs to see the same charts we just discussed. So long as you could get the gist of what was covered here, you should be fine with the config util.
 
 > [!NOTE]
-> The last thing you need to do is hit the "find best" button and get the angle from the "head" arrow. Then hit save. Put that value in into the OpenSCAD settings before printing the head.
+> The last thing you need to do, is hit the "find best" button and get the angle from the "head" arrow. Then hit save. Put that value in into the OpenSCAD settings before printing the head.
 
 <img src="docs/reference_photos/config_gui.png" alt="The neck setup window (just config)" width="900">
 
@@ -296,4 +301,5 @@ That's all folks.
 [robbie_restoration]: https://github.com/busyDuckman/robbie_restoration
 [lookaround]: https://github.com/busyDuckman/look_around
 [neck.yaml]: src/robbie_description/config/neck.yaml
+[requirements.txt]: scripts/setup/requirements.txt
 

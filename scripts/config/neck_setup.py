@@ -22,14 +22,17 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "plots"))
 
 import matplotlib
-matplotlib.use("TkAgg")
 import matplotlib.image as mpimg
 import numpy as np
-import tkinter as tk
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from matplotlib.patches import Polygon, Rectangle
-from tkinter import messagebox, ttk
+try:
+    import tkinter as tk
+    matplotlib.use("TkAgg")
+    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+    from tkinter import messagebox, ttk
+except ImportError:   # no tkinter (e.g. CI's system Python): the helpers still import for tests, the window can't open
+    tk = None
 
 import common
 import sim as S

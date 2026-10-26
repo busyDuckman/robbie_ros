@@ -32,15 +32,6 @@ step "Settings (.env)"
 # shellcheck disable=SC1090
 [ -f "$env_file" ] && . "$env_file"
 
-save_setting() {  # save_setting NAME VALUE: sets it now and saves it to .env
-    printf -v "$1" '%s' "$2"
-    touch "$env_file"
-    chmod 600 "$env_file"
-    grep -v "^$1=" "$env_file" > "$env_file.tmp" || true
-    printf '%s=%q\n' "$1" "$2" >> "$env_file.tmp"
-    mv "$env_file.tmp" "$env_file"
-}
-
 read_secret() {  # read_secret VAR "question": hidden input that echoes * per character
     local c s=""
     printf '%s: ' "$2"
