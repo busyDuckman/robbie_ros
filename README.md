@@ -141,21 +141,26 @@ just down            # stop the simulation (don't just close the window)
 
 The system is non trivial, so I used the simulation to study the behaviour.
 
-## 5.1 Overview
-We essentially have a tensegrity-like prism for a neck joint which behaves to transform the sled orientation, to a platform roll/pitch. This system is not perfect and performs some motions really well, and others quite poorly. And thats actually OK, provided we get the system behaving well where it counts.
-
 **Important terms used form now on**: 
   - **gracefull**: means no unwanted roll, jerky motion, or going off-center.
     - |roll| <= 1° and off_centre <= 10 mm. 
   - **ugly**: means, by any means necessary.
+  - **Resting Pose**: the sleds evenly spaced at 120deg, and the platform is level.
+  - **CW State**: Looking from the top, this is the manual ClockWise torsioning of the neck joint to a stable pose.
+  - **CCW State**: Looking from the top, this is the manual Counter-ClockWise torsioning of the neck joint to a stable pose.
+  - **Nod line**: in _resting pose_, nod lines lie halfway between each sled linkage and its matching upper platform linkage. 
+    - A head facing along a nod line can make its largest graceful pitch in either up or down. 
+    - A head Facing 60° left or right of a _nod line_ has to opposite graceful pitch allowance.
 
+## 5.1 Overview
+We essentially have a tensegrity-like prism for a neck joint which behaves to transform the sled orientation, to a platform roll/pitch. This system is not perfect and performs some motions really well, and others quite poorly. And thats actually OK, provided we get the system behaving well where it counts.
 
-Things a head joint must do "gracefully":
+Things a head joint must do _gracefully+:
   - look up and down (pitch)
   - turn side to side (yaw)
   - track between positions smoothly.
 
-Things a neck must be able to do, "ugly".
+Things a neck must be able to do, _ugly+.
   - tilt to the side (roll)
   - lateral movements
 
@@ -181,32 +186,57 @@ all the charts below should still work.
 to tune in the rod length and the jam angle of the sled linkage.
 
 ## 5.2 What is the available movement?
+As you might expect the movement limits have a 3-fold rotational symmetry.  
+The minority of poses have only one solution, and it's uncommon to see more than 3 solutions. Going beyond a 5 degree roll or pitch, is not always possible, but a 15 degree pitch is possible in the regions the neck needs to be able to do so.
+
+<img src="docs/default_plot_output/12_solution_count.png" alt="Sled solutions per roll/pitch target" width="600">
 
 
-## 5.3 What does th movement proceed poorly?
+
+The movement of the head can go off center, areas where we saw many solutions, also tend to offer a _graceful__ solution.
+
+<img src="docs/default_plot_output/13_min_off.png" alt="Least off centre for each roll/pitch target" width="600">
+
+the difference in solution can easily change the head central pos 10 to 20 mm, so picking a good solution is vital to smooth movement.
+
+<img src="docs/default_plot_output/14_off_spread.png" alt="Least off centre for each roll/pitch target" width="600">
+
 
 
 ## 5.4 Rod length trade off
 
-Results at the current rod-end angle (22°), going from 70 mm to 87 mm to 115 mm:
 
-Factor	Better	70 mm	87 mm	115 mm
-Max tilt (°)	higher	18.3	15.9	12.0
-Pitch up and down at the best heading (°)	higher	4.1	5.7	5.9 (6.0 at 105)
-Least off centre at 10° tilt (mm)	lower	5.1	7.3	12.8
-Off centre at max tilt (mm)	lower	11.5	14.0	16.9
-Swing (deg/deg)	lower	0.91	0.78	0.74
+<img src="docs/default_plot_output/14_roll_pitch_coverage_by_rod.png" alt="Roll/pitch coverage by rod length" width="900">
+
+
+<img src="docs/default_plot_output/01_tradeoff_vs_rod_len_jam75.png" alt="Rod length trade-off at jam 75" width="900">
+
+
 
 ## 5.5 Jam angle trade off
+
+<img src="docs/default_plot_output/13_roll_pitch_coverage_by_jam.png" alt="Roll/pitch coverage by jam angle" width="900">
+
+<img src="docs/default_plot_output/tradeoff.png" alt="Jam angle trade-off" width="900">
+
 
 
 ## 5.6 The loop up vs look down trade off.
 
-Depending on configuration, the neck joint either looks up better, or looks down better. 
+Depending on configuration, the neck joint either looks up better, or looks down better, depending 
+on which nod line it is aligned with. 
+
+
+<img src="docs/default_plot_output/18_pitch_by_head_orientation.png" alt="Largest pitch by head orientation, CW and CCW twist" width="700">
+
+
+
 
 
 As it turns out, manually twisting the head platform between the two stable poses, lets you 
 choose between the look up/down modes.
+
+<img src="docs/default_plot_output/25_render_turned_by_hand.png" alt="Platform turned by hand to the other twist, top view" width="700">
 
 | Twist | Up (graceful) | Down (graceful) | Up (ugly) | Down (ugly) |
 |-------|--------------:|----------------:|----------:|------------:|
@@ -224,9 +254,13 @@ Rod length effect the trade of as well, as per:
 |             87 | 2.4 / 12.3 | 3.6 / 12.7 | 5.0 / 11.6 |  6.4 / 7.7 |  8.2 / 7.1 |  9.2 / 6.3 | 10.2 /  6.9 |
 |            115 |  1.8 / 8.9 |  2.9 / 8.9 |  3.7 / 8.4 |  4.6 / 8.0 |  5.3 / 6.5 |  6.0 / 5.1 |  6.5 /  4.7 |
 
+
 _(Each cell is the graceful up/down in degrees)_
 
 The [lookaround ] controller works well with this, it can set the preferred movement range of a neck, and use the eyes to give robbie a good gaze, only going into the _ugly_ mode if the eyes are at full extent.
+
+
+
 
 
 ## 5.7 Putting it all together

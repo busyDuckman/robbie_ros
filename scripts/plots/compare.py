@@ -5,6 +5,7 @@ Ported from scripts/ik_simulation/plots.py and rod_len.py.
 import numpy as np
 import matplotlib.pyplot as plt
 
+import common
 from common import COLS, PANELS, SERIES, STYLE, INK, tidy, better, metrics, graceful_ugly, num
 
 F_ = "ik_sweep"
@@ -177,26 +178,36 @@ def run(book, D):
              "max(|d roll|, |d pitch|) between the two passes, on a fixed 0 to 0.01 deg scale.",
              f"Pass B - pass A, max(|d_roll|, |d_pitch|), largest {pdm.max():.3f} deg", "deg", grid(diff, pdm), False, fixed_max=0.01)
 
-    # ---------------------------------------------------------------- 13 roll/pitch coverage
-    n = len(jams); cols = 4; rows_ = int(np.ceil(n / cols))
-    fig, axes = plt.subplots(rows_, cols, figsize=(3.2 * cols, 3.0 * rows_ + 0.6), sharex=True, sharey=True, squeeze=False,
-                             constrained_layout=True)
-    vmax = np.percentile(A[:, COLS["off"]], 99.5)
-    for ax, j in zip(axes.flat, jams):
-        m = A[:, 0] == j
-        sc = ax.scatter(A[m, COLS["roll"]], A[m, COLS["pitch"]], c=A[m, COLS["off"]], s=2, cmap="Blues", vmin=0, vmax=vmax,
-                        linewidths=0)
-        ax.set_title(f"jam {jl(j)}", fontsize=9); ax.set_aspect("equal"); ax.grid(color="#e6e6e6", lw=0.5)
-    for ax in axes.flat[n:]:
-        ax.axis("off")
-    for ax in axes[-1, :]:
-        ax.set_xlabel("roll (deg)")
-    for ax in axes[:, 0]:
-        ax.set_ylabel("pitch (deg)")
-    fig.colorbar(sc, ax=axes, shrink=0.6, label="off centre (mm)")
-    book.save(fig, F_, "roll_pitch_coverage_by_jam", "Roll/pitch coverage by jam angle",
-              "Every pass A sweep point plotted at its head roll and pitch (world frame), coloured by off centre, one panel "
-              "per jam angle.", title="Roll vs pitch at every sweep point, coloured by off centre, pass A")
+    # ---------------------------------------------------------------- 13, 14 roll/pitch coverage
+    cov_jams = [j for j in jams if j not in (min(jams), max(jams))]   # end jams dropped for presentation
+    cov = {"jam": [(f"jam {jl(j)}", D.runs[cur_rod, j, "a"][0]) for j in cov_jams],
+           "rod": [(f"rod {L:g} mm" + (" (neck.yaml)" if L == cur_rod else ""), D.runs[L, cur_jam, "a"][0]) for L in rods]}
+    vmax = np.percentile(np.concatenate([a for p in cov.values() for _, a in p])[:, COLS["off"]], 99.5)
+    coverage_about = ("Every pass A sweep point plotted at its head roll and pitch (world frame), coloured by off centre. "
+                      "Blue: off centre within the graceful limit (10 mm), orange: beyond it; the bluer points are drawn on top. "
+                      "Both coverage charts share one colour scale.")
+    for kind, heading, about, title in (
+            ("jam", "Roll/pitch coverage by jam angle",
+             f"One panel per jam angle at rod {cur_rod:g} mm ({cov_jams[0]:g} to {cov_jams[-1]:g} deg). ",
+             f"Roll vs pitch at every sweep point by jam angle, rod {cur_rod:g} mm, pass A"),
+            ("rod", "Roll/pitch coverage by rod length",
+             f"One panel per rod length at the neck.yaml jam ({cur_jam:g} deg). ",
+             f"Roll vs pitch at every sweep point by rod length, jam {cur_jam:g} deg, pass A")):
+        panels = cov[kind]
+        n = len(panels); cols = 3 if n in (5, 6, 9) else 4; rows_ = int(np.ceil(n / cols))
+        fig, axes = plt.subplots(rows_, cols, figsize=(3.2 * cols, 3.0 * rows_ + 0.6), sharex=True, sharey=True, squeeze=False,
+                                 constrained_layout=True)
+        for ax, (label, a) in zip(axes.flat, panels):
+            sc = common.off_scatter(ax, a, vmax)
+            ax.set_title(label, fontsize=9); ax.set_aspect("equal"); ax.grid(color="#e6e6e6", lw=0.5)
+        for ax in axes.flat[n:]:
+            ax.axis("off")
+        for ax in axes[-1, :]:
+            ax.set_xlabel("roll (deg)")
+        for ax in axes[:, 0]:
+            ax.set_ylabel("pitch (deg)")
+        common.off_colorbar(fig, sc, axes, shrink=0.8, label="off centre (mm)")
+        book.save(fig, F_, f"roll_pitch_coverage_by_{kind}", heading, about + coverage_about, title=title)
 
     # ================================================================= rod length
     lens = rods

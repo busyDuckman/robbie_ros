@@ -6,11 +6,13 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
+import common
 from common import COLS, SERIES, INK, tidy, by_heading, best_pitch, graceful_ugly, tilt
 
 F_ = "this_robbie"
 UP = ["#9ecae1", "#4292c6", "#08306b"]     # tight to loose
 DOWN = ["#fdae6b", "#f16913", "#8c2d04"]
+SEQ_BLUES = matplotlib.colors.LinearSegmentedColormap.from_list("blues", plt.get_cmap("Blues")(np.linspace(0.3, 1.0, 256)))   # palest step still clear of white
 SLED_ABOUT = "Over the sled offsets sled_1 and sled_2 (sled_3 = -(sled_1 + sled_2)), neck.yaml's twist, pass A. "
 HEAD_ABOUT = ("Head orientation is the direction the head faces on the platform (0 = +X, counter-clockwise from the top); "
               "pitch is the elevation of the head's forward axis and roll the elevation of its left axis. ")
@@ -134,19 +136,20 @@ def run(book, D):
         book.save(fig, F_, name, heading, SLED_ABOUT + f"{title}, central differences on the 1 deg grid.",
                   title=f"{title}\ncolour clipped at the 99.5th percentile")
 
-    # ---------------------------------------------------------------- 12-14 per roll/pitch target
+    # ---------------------------------------------------------------- 12-16 per roll/pitch target
     # The sled grid is split into triangles, each mapped linearly into roll/pitch. A target's solutions are
-    # the triangles that contain it; off centre is interpolated in each.
+    # the triangles that contain it; off centre, yaw and sled angles are interpolated in each.
     STEP = 0.25
     rs = np.arange(np.floor(Rg.min()), np.ceil(Rg.max()) + STEP, STEP)
     ps = np.arange(np.floor(Pg.min()), np.ceil(Pg.max()) + STEP, STEP)
     count = np.zeros((len(ps), len(rs)), int)
-    offs = [[[] for _ in rs] for _ in ps]
-    Rf, Pf, Of = (np.ma.filled(G[k].astype(float), np.nan) for k in ("roll", "pitch", "off"))
+    offs = [[[] for _ in rs] for _ in ps]   # per target: (off, yaw, sled_1, sled_2) of each solution
+    Rf, Pf, Of, Yf = (np.ma.filled(G[k].astype(float), np.nan) for k in ("roll", "pitch", "off", "yaw"))
     for i in range(N - 1):
         for j in range(N - 1):
             for tri in (((i, j), (i, j + 1), (i + 1, j)), ((i + 1, j + 1), (i + 1, j), (i, j + 1))):
-                xy = np.array([[Rf[a], Pf[a]] for a in tri]); o = np.array([Of[a] for a in tri])
+                xy = np.array([[Rf[a], Pf[a]] for a in tri])
+                o = np.array([[Of[a], Yf[a], a[1] - LIM, a[0] - LIM] for a in tri])   # grid row = sled_2, column = sled_1
                 if np.isnan(xy).any():
                     continue
                 (x0, y0), (x1, y1), (x2, y2) = xy
@@ -165,10 +168,19 @@ def run(book, D):
                 for a, b in zip(*np.nonzero(inside)):
                     count[pi[a], ci[b]] += 1
                     offs[pi[a]][ci[b]].append(l0[a, b] * o[0] + l1[a, b] * o[1] + l2[a, b] * o[2])
-    min_off = np.array([[min(v) if v else np.nan for v in row] for row in offs])
-    max_off = np.array([[max(v) if v else np.nan for v in row] for row in offs])
-    book.csv(F_, "roll_pitch_targets.csv", ["roll", "pitch", "n_solutions", "min_off", "max_off"],
-             [[round(r_, 2), round(p, 2), count[a, b], round(min_off[a, b], 3), round(max_off[a, b], 3)]
+    def per_target(f):
+        return np.array([[f(np.array(v)) if v else np.nan for v in row] for row in offs])
+
+    def sled_spread(v):   # largest sled angle difference between any two solutions, sled_3 = -(sled_1 + sled_2)
+        s = np.column_stack([v[:, 2], v[:, 3], -(v[:, 2] + v[:, 3])])
+        return np.abs(s[:, None, :] - s[None, :, :]).max()
+
+    min_off, max_off = per_target(lambda v: v[:, 0].min()), per_target(lambda v: v[:, 0].max())
+    yaw_spread = per_target(lambda v: np.ptp(v[:, 1]))
+    sled_spread_ = per_target(sled_spread)
+    book.csv(F_, "roll_pitch_targets.csv", ["roll", "pitch", "n_solutions", "min_off", "max_off", "yaw_spread", "sled_spread"],
+             [[round(r_, 2), round(p, 2), count[a, b], round(min_off[a, b], 3), round(max_off[a, b], 3),
+               round(yaw_spread[a, b], 3), round(sled_spread_[a, b], 3)]
               for a, p in enumerate(ps) for b, r_ in enumerate(rs) if count[a, b]])
     REXT = [rs[0] - STEP / 2, rs[-1] + STEP / 2, ps[0] - STEP / 2, ps[-1] + STEP / 2]
     fig, ax = plt.subplots(figsize=(6.4, 5.6), constrained_layout=True)
@@ -185,13 +197,24 @@ def run(book, D):
               "triangles mapped linearly into roll/pitch. White is not reachable.",
               title="Sled solutions per roll/pitch target (white: not reachable)\n"
                     "counts in the thin strips (mostly 4+) depend on the 1 deg grid; unchecked")
-    for name, heading, data, title in [("min_off", "Least off centre per target", min_off, "Least off centre among the solutions for each roll/pitch target"),
-                                       ("off_spread", "Off-centre spread per target", max_off - min_off, "Off centre spread (max - min) among the solutions")]:
+    for name, heading, data, title, unit in [
+            ("min_off", "Least off centre per target", min_off, "Least off centre among the solutions for each roll/pitch target", "mm"),
+            ("off_spread", "Off-centre spread per target", max_off - min_off, "Off centre spread (max - min) among the solutions", "mm"),
+            ("yaw_spread", "Yaw spread per target", yaw_spread, "Yaw spread (max - min) among the solutions", "deg"),
+            ("sled_spread", "Sled spread per target", sled_spread_,
+             "Sled spread among the solutions: the largest difference in any one sled's angle between two solutions", "deg")]:
         fig, ax = plt.subplots(figsize=(6.4, 5.6), constrained_layout=True)
-        im = ax.imshow(np.ma.masked_invalid(data), origin="lower", extent=REXT, cmap="Blues", vmin=0, vmax=np.nanmax(data))
+        spread = "spread" in name
+        if spread:   # one solution: flat grey, off the colour scale
+            ax.imshow(np.ma.masked_where(count != 1, np.ones_like(data)), origin="lower", extent=REXT,
+                      cmap=matplotlib.colors.ListedColormap(["#d9d9d9"]))
+            data = np.where(count == 1, np.nan, data)
+        im = ax.imshow(np.ma.masked_invalid(data), origin="lower", extent=REXT, cmap=SEQ_BLUES, vmin=0, vmax=np.nanmax(data))
         ax.set_xlabel("roll (deg)"); ax.set_ylabel("pitch (deg)"); ax.set_aspect("equal"); ax.grid(color="#e6e6e6", lw=0.5)
-        fig.colorbar(im, ax=ax, shrink=0.8, label="mm")
-        book.save(fig, F_, name, heading, f"{title}, over the same roll/pitch bins as the solution count.", title=title)
+        fig.colorbar(im, ax=ax, shrink=0.8, label=unit)
+        book.save(fig, F_, name, heading, f"{title}, over the same roll/pitch bins as the solution count. White: not reachable" +
+                  ("; grey: one solution." if spread else "."),
+                  title=title.replace(": ", ":\n") + ("\nwhite: not reachable, grey: one solution" if spread else "\nwhite: not reachable"))
 
     # ---------------------------------------------------------------- pitch by head orientation
     heads = np.radians(np.arange(0, 361))
@@ -322,12 +345,13 @@ def run(book, D):
     vmax = max(np.percentile(R[d][0][:, COLS["off"]], 99.5) for d in ORDER)
     for ax, d in zip(axes[0], ORDER):
         a = R[d][0]
-        sc = ax.scatter(a[:, COLS["roll"]], a[:, COLS["pitch"]], c=a[:, COLS["off"]], s=2, cmap="Blues", vmin=0, vmax=vmax, linewidths=0)
+        sc = common.off_scatter(ax, a, vmax)
         ax.set_title(LABEL[d], fontsize=9); ax.set_aspect("equal"); ax.grid(color="#e6e6e6", lw=0.5)
         ax.set_xlabel("roll (deg)"); ax.set_ylabel("pitch (deg)")
-    fig.colorbar(sc, ax=axes, shrink=0.8, label="off centre (mm), colour clipped at the 99.5th percentile")
+    common.off_colorbar(fig, sc, axes, shrink=0.8, label="off centre (mm), colour clipped at the 99.5th percentile")
     book.save(fig, F_, "roll_pitch_coverage_cw_ccw", "Roll/pitch coverage, both twists",
-              "Every pass A sweep point at its head roll and pitch (world frame), coloured by off centre, one panel per twist.",
+              "Every pass A sweep point at its head roll and pitch (world frame), coloured by off centre, one panel per twist. "
+              "Blue: off centre within the graceful limit (10 mm), orange: beyond it; the bluer points are drawn on top.",
               title="Roll vs pitch at every sweep point, CW and CCW viewed from the top, pass A")
 
     TILT_BINS = [5, 10, 15]

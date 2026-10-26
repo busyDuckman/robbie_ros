@@ -144,5 +144,25 @@ class Book:
             w = csv.writer(f); w.writerow(header); w.writerows(rows)
 
 
+def off_cmap(vmax):
+    """Off-centre colour scale that switches hue at the graceful limit: blues up to it, oranges beyond."""
+    from matplotlib.colors import LinearSegmentedColormap
+    f = min(GRACEFUL_OFF / vmax, 0.999)
+    return LinearSegmentedColormap.from_list("off", [(0, "#d6e6f7"), (f, "#08306b"), (f, "#fdd0a2"), (1, "#7f2704")])
+
+
+def off_scatter(ax, a, vmax):
+    """Roll vs pitch scatter coloured by off centre, graceful points drawn on top."""
+    o = np.argsort(-a[:, COLS["off"]])
+    return ax.scatter(a[o, COLS["roll"]], a[o, COLS["pitch"]], c=a[o, COLS["off"]], s=2, cmap=off_cmap(vmax), vmin=0, vmax=vmax,
+                      linewidths=0)
+
+
+def off_colorbar(fig, sc, axes, label, **kw):
+    cb = fig.colorbar(sc, ax=axes, label=f"{label}\nblue: graceful (<= {GRACEFUL_OFF:g} mm), orange: beyond", **kw)
+    cb.ax.axhline(GRACEFUL_OFF, color="white", lw=2)
+    return cb
+
+
 def num(v, fmt="{:.2f}"):
     return "-" if not np.isfinite(v) else fmt.format(v)
