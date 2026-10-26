@@ -32,8 +32,9 @@ build:
     @{{ _compose_dev }} run --rm -T dev bash scripts/dev/ros.sh \
         colcon build --symlink-install --base-paths src --event-handlers console_direct-
 
-# Basic unit test run
+# Basic unit test run (also what CI runs: .github/workflows/test.yml)
 test:
+    uv run --python 3.12 --with mujoco==3.12.0 --with numpy --with pyyaml --with pytest pytest -q scripts/plots
 
 # Full testing, including sim runs (homing, pose-to-sled, unwinding)
 vet: test

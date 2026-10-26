@@ -1,0 +1,23 @@
+# Fast sanity tests on the neck model and sim helpers (just test). A few seconds of sim; no ROS, no container.
+name: test
+
+on:
+  push:
+    paths: &paths
+      - "src/robbie_description/**"
+      - "scripts/plots/**"
+      - "justfile"
+      - ".github/workflows/test.yml"
+  pull_request:
+    paths: *paths
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - uses: extractions/setup-just@v3
+      - run: just test
