@@ -78,17 +78,14 @@ stop:
 
 # (re-)start the MuJoCo sim, the neck poser window, the Rerun viewer and robbie_ros against the sim
 #  --headless to not show the simulator window, --cw to start in the CW pole (default --ccw)
-#  Rerun goes where ROBBIE_RERUN (.env, from just setup) says; --headless with a local viewer records to .output/rerun/
+#  Rerun goes where ROBBIE_RERUN (.env, from just setup) says, starting the viewer if needed (scripts/dev/rerun_viewer.sh)
 up *flags: down build
     #!/usr/bin/env bash
     set -euo pipefail
-    [ -f .env ] && . ./.env
-    headless=false poser=true twist=ccw rerun="${ROBBIE_RERUN:-local}"
+    headless=false poser=true twist=ccw
     [[ " {{ flags }} " == *" --headless "* ]] && headless=true poser=false
     [[ " {{ flags }} " == *" --cw "* ]] && twist=cw
-    if [ "$headless" = true ] && [ "$rerun" = local ]; then
-        rerun="/ws/robbie_ros/.output/rerun/sim_$(date +%Y%m%d_%H%M%S).rrd"
-    fi
+    rerun="$(bash scripts/dev/rerun_viewer.sh $headless)"
     {{ _compose_dev }} run -d --name {{ _sim_container }} dev bash scripts/dev/ros.sh \
         ros2 launch robbie_bringup sim.launch.py headless:=$headless poser:=$poser twist:=$twist rerun:=$rerun >/dev/null
     for i in $(seq 1 30); do

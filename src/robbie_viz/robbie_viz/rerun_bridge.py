@@ -1,9 +1,9 @@
 """Logs the neck to Rerun: a 3D view of the linkage, and time series of the sleds and head pose.
 
-    ros2 run robbie_viz rerun_bridge --ros-args -p rerun:=local [-p twist:=cw]
+    ros2 run robbie_viz rerun_bridge --ros-args -p rerun:=docker [-p twist:=cw]
 
 rerun is where the log goes (ROBBIE_RERUN in .env, set by just setup):
-  - local: the viewer sim.launch.py starts in the dev container, on 127.0.0.1:9876.
+  - docker: the viewer sim.launch.py starts in the dev container, on 127.0.0.1:9876.
   - host:port: streams to a viewer there. It must be the same version as rerun-sdk.
   - a path ending .rrd: saves a recording.
 
@@ -32,7 +32,7 @@ from std_msgs.msg import Float64MultiArray
 JOINTS = ["sled_1", "sled_2", "sled_3"]
 GRACEFUL_ROLL = 1.0    # deg
 GRACEFUL_OFF = 10.0    # mm
-LOCAL_VIEWER = "127.0.0.1:9876"
+DOCKER_VIEWER = "127.0.0.1:9876"
 
 RED, BLUE, GREY, YELLOW, ORANGE = (214, 39, 40), (51, 89, 204), (190, 190, 190), (204, 204, 77), (235, 105, 51)
 
@@ -83,8 +83,8 @@ def start_rerun(sink):
         collapse_panels=True,
     )
     rr.init("robbie_ros")
-    if sink == "local":
-        sink = LOCAL_VIEWER
+    if sink == "docker":
+        sink = DOCKER_VIEWER
     if sink.endswith(".rrd"):
         os.makedirs(os.path.dirname(os.path.abspath(sink)), exist_ok=True)
         rr.save(sink, default_blueprint=blueprint)
@@ -105,12 +105,12 @@ def reachable(sink):
 class RerunBridge(Node):
     def __init__(self):
         super().__init__("rerun_bridge")
-        sink = self.declare_parameter("rerun", "local").value
+        sink = self.declare_parameter("rerun", "docker").value
         self.pole = config.pole(self.declare_parameter("twist", "").value)
         self.cfg = config.neck_yaml()
         start_rerun(sink)
         self.get_logger().info(f"Logging to Rerun: {sink}")
-        if sink not in ("local", LOCAL_VIEWER) and not sink.endswith(".rrd") and not reachable(sink):
+        if sink not in ("docker", DOCKER_VIEWER) and not sink.endswith(".rrd") and not reachable(sink):
             # The SDK keeps retrying, and holds everything logged in memory until it connects.
             self.get_logger().warn(f"No Rerun viewer at {sink} yet. Start one (rerun --port {sink.rpartition(':')[2]}).")
         self.log_static()

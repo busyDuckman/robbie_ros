@@ -23,7 +23,7 @@ docker info >/dev/null 2>&1 || die "Can't reach the Docker daemon. Start Docker,
 docker compose version >/dev/null 2>&1 || die "Docker Compose v2 is missing (the 'docker compose' plugin)."
 echo "OK: $(docker --version)"
 
-step "robbie repo (ADR 3)"
+step "robbie repo"
 robbie_dir="$(cd "$repo_root/.." && pwd)/robbie"
 if [ -d "$robbie_dir/.git" ]; then
     echo "Found $robbie_dir"
@@ -38,19 +38,8 @@ else
     die "robbie is needed at $robbie_dir (robbie_interfaces). The dev container mounts it."
 fi
 
-step "Rerun viewer (ADR 1)"
-# shellcheck disable=SC1091
-[ -f "$repo_root/.env" ] && . "$repo_root/.env"
-if [ -n "${ROBBIE_RERUN:-}" ]; then
-    echo "ROBBIE_RERUN=$ROBBIE_RERUN (from .env; edit it there to change)"
-else
-    echo "just up logs the sim to a Rerun viewer. Either:"
-    echo "  local      run one in the dev container, just for this repo (nothing to install)"
-    echo "  host:port  use your own viewer, e.g. localhost:9876. It must be Rerun $(sed -n 's/^rerun-sdk==//p' "$repo_root/scripts/setup/requirements.txt")."
-    read -r -p "Rerun viewer [local]: " rerun || true
-    save_setting ROBBIE_RERUN "${rerun:-local}"
-    echo "Saved ROBBIE_RERUN=$ROBBIE_RERUN to .env"
-fi
+step "Rerun viewer"
+bash "$(dirname "$0")/rerun_setup.sh"
 
 step "Dev container"
 echo "Building the image (the first build downloads a few GB)..."

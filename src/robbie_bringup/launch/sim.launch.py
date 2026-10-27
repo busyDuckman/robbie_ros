@@ -3,7 +3,7 @@
     ros2 launch robbie_bringup sim.launch.py [headless:=true] [poser:=false] [twist:=cw] [rerun:=off]
 
 poser opens the neck poser window (robbie_poser), for moving the sleds by hand. twist is the pole the
-neck starts in, cw or ccw seen from above (default ccw). rerun is where robbie_viz logs to: local (a
+neck starts in, cw or ccw seen from above (default ccw). rerun is where robbie_viz logs to: docker (a
 viewer in this container), host:port (your own viewer), a .rrd path, or off.
 
 Move the sleds (orbit angles in radians; 0, 120 and 240 deg is level):
@@ -70,7 +70,7 @@ def generate_launch_description():
     # MuJoCo does, so xdotool can find it.
     nodes.append(
         ExecuteProcess(cmd=["env", "-u", "WAYLAND_DISPLAY", "rerun", "--bind", "127.0.0.1", "--port", "9876", "--memory-limit", "25%"], output="log",
-                       condition=IfCondition(PythonExpression(["'", rerun, "' == 'local'"])))
+                       condition=IfCondition(PythonExpression(["'", rerun, "' == 'docker'"])))
     )
     nodes.append(
         Node(package="robbie_viz", executable="rerun_bridge", output="both",
@@ -83,7 +83,7 @@ def generate_launch_description():
         DeclareLaunchArgument("poser", default_value="true", description="Open the neck poser window"),
         DeclareLaunchArgument("twist", default_value="ccw", choices=["cw", "ccw"],
                               description="The pole the neck starts in, seen from above"),
-        DeclareLaunchArgument("rerun", default_value="local",
-                              description="Rerun viewer: local, host:port, a .rrd path, or off"),
+        DeclareLaunchArgument("rerun", default_value="docker",
+                              description="Rerun viewer: docker, host:port, a .rrd path, or off"),
         *nodes,
     ])

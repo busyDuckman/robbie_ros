@@ -118,9 +118,9 @@ just down            # stop the simulation (don't just close the window)
 `just up` also opens a small GUI for driving the robot's joints, etc.
 
 It also logs the neck to Rerun: the linkage and nod lines in 3D, with head roll/pitch/yaw, off centre and the sleds
-over sim time. `just setup` asks where the viewer is (`ROBBIE_RERUN` in `.env`): `local` runs one in the dev
-container, or give the `host:port` of your own (same version as `rerun-sdk` in [requirements.txt]). With
-`--headless`, a local viewer is replaced by a recording in `.output/rerun/`.
+over sim time. `just setup` picks the viewer (saved in `.env`): one it finds installed (on Windows too, from WSL),
+which `just up` starts if needed; your own at `host:port`; or `docker`, one in the dev container. Viewers must match
+`rerun-sdk` in [requirements.txt]. With `--headless`, no viewer is started; instead of one, the sim records to `.output/rerun/`.
 
 <img src="docs/reference_photos/pose_in_simulation.jpg" alt="A posed neck in the simulation" width="600">
 
@@ -263,7 +263,9 @@ The [lookaround] controller works well with this. It can set the preferred movem
 
 First, **thanks for still being here**, those last few pages were a bit heavy.
 
-Configuring your Robbie means making the neck.yaml file.
+Configuring your Robbie means:
+  - making the neck.yaml file.
+  - 3d printing the the upper platform with a matching head_rotation.
 
 Rather than try and figure it out from the theory (above), there is a util that can take care of it. Run `just config`. If you don't know your rod jam limits (quite likely), you can measure the resting pose and this util will back-calculate it. You can also use the tabs to see the same charts we just discussed. So long as you could get the gist of what was covered here, you should be fine with the config util.
 

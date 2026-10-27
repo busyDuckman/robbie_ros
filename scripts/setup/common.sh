@@ -13,6 +13,16 @@ ask() {
     case "$answer" in y|Y|yes|YES) return 0 ;; *) return 1 ;; esac
 }
 
+# port_open HOST PORT: returns 0 if something is listening there
+port_open() {
+    timeout 1 bash -c "exec 3<>/dev/tcp/$1/$2" 2>/dev/null
+}
+
+# The Rerun version robbie_ros logs with; a viewer must match it.
+rerun_sdk_version() {
+    sed -n 's/^rerun-sdk==//p' "$repo_root/scripts/setup/requirements.txt" | tr -d '\r'
+}
+
 save_setting() {  # save_setting NAME VALUE: sets it now and saves it to .env
     local env_file="$repo_root/.env"
     printf -v "$1" '%s' "$2"
