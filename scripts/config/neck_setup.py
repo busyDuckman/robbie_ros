@@ -67,7 +67,7 @@ MAIN = [
      "Type it, or fill it from the rod-end spec or your measured height with the buttons."),
     (("head", "rotation_deg"), "Head rotation", "deg", 1, 1,
      "Which way the head faces on the platform: 0 is centre → rod end 1, + is CCW seen from above.\n"
-     "Roll and pitch are in this frame. A head on a nod line gets the most graceful pitch one way.\n"
+     "Roll and pitch are in this frame. Facing the up end of a nod line gives the most graceful pitch up, the down end pitch down.\n"
      "Your robot, your call."),
 ]
 OPENSCAD = [
@@ -179,19 +179,24 @@ def load_sweep(cfg):
     return common.graceful_ugly(common.to_frame(a, ck["head_zero_deg"])), ck   # by head.rotation_deg
 
 
-SMOOTH = 5   # deg either side, so one noisy sweep point can't pick the head rotation
+METHODS = ("nod line", "best compromise")   # how Find best picks the head rotation
 
 
-def best_rotation(sims, near):
-    """Head rotation (deg) where twisting gives the strongest graceful look-up one way and look-down the other:
-    the largest min(best up, best down) over both poles, smoothed SMOOTH deg either side. The neck's symmetry
-    repeats it; of the equal ones, the one nearest near."""
-    k = np.ones(2 * SMOOTH + 1) / (2 * SMOOTH + 1)
-    sm = lambda v: np.convolve(np.r_[v[360 - SMOOTH:360], v[:360], v[:SMOOTH]], k, "valid")
-    best = {w: np.maximum(*(sm(sims[p, 0][0]["graceful", w]) for p in ("CW", "CCW"))) for w in ("up", "down")}
-    score = np.minimum(best["up"], best["down"])
-    tops = np.flatnonzero(score >= score.max() - 0.05)
-    return int(min(tops, key=lambda d: abs((d - near + 180) % 360 - 180)))
+def head_lines(cfg, pole, method):
+    """The three head.rotation_deg (120 deg apart) where the neck twisted `pole` looks up, by `method`:
+    nod line: the up ends of `pole`'s nod lines. `pole` looks up as far as it can; the other twist looks down, a little
+    short of its best. The down ends, 180 deg round, do the reverse (same platform pose, head turned round).
+    best compromise: `pole` looks up and the other twist looks down about equally. That's halfway between the
+    nod line (jam/2 from a rod end) and the other twist's look-down line (60 - jam/2), so always 30 deg from a
+    rod end whatever the geometry: the two twists are mirror images. Neither needs the sim."""
+    if method == "nod line":
+        return S.nod_lines(cfg, pole)
+    s = 1 if pole == "CW" else -1
+    return [(30 * s + 120 * k + 180) % 360 - 180 for k in range(3)]
+
+
+def nearest(lines, rot):
+    return min(lines, key=lambda n: abs((n - rot + 180) % 360 - 180))
 
 
 def call(gu, deg):
@@ -367,7 +372,7 @@ def draw_pitch(fig, cfg, sims):
         ax.set_title(f"Twisted {pole}", fontsize=10, pad=12)
     axes[1].legend(loc="upper left", bbox_to_anchor=(1.05, 1.0), fontsize=8, frameon=False)
     fig.text(0.01, 0.01, "Angle: head rotation (0 = rod end 1, CCW from above).  Distance: largest pitch (deg).  "
-             "Green: your head.  Gold: nod lines.", fontsize=8, color="#555555")
+             "Green: your head.  Gold: nod lines (up ends).", fontsize=8, color="#555555")
 
 
 # ------------------------------------------------------------------------------------------- widgets
@@ -429,7 +434,6 @@ class App:
         self.root = root
         self.q = queue.Queue()
         self.busy = False
-        self.apply_best = False
         self.sims = {}
         self.loaded = {}   # sweep path -> (graceful_ugly, checks)
         self.vars = {}
@@ -471,10 +475,12 @@ class App:
         st.map("Best.TButton", background=[("active", "#b5e2b5")])
         b = ttk.Button(row, text="Find best", style="Best.TButton", command=self.to_best); b.pack(side="left", padx=2)
         Tip(b, self.best_tip)
-        ttk.Label(row, text="  on nod line:").pack(side="left")
-        for pole in ("CW", "CCW"):
-            b = ttk.Button(row, text=pole, width=5, command=lambda p=pole: self.to_nod(p)); b.pack(side="left", padx=2)
-            Tip(b, lambda p=pole: self.nod_tip(p))
+        self.method = tk.StringVar(value=METHODS[0])
+        cb = ttk.Combobox(row, textvariable=self.method, values=METHODS, state="readonly", width=15); cb.pack(side="left", padx=2)
+        Tip(cb, "How Find best picks the head rotation, for the twist selected below.\n"
+                "nod line: the up end of its nearest nod line. That twist looks up as far as it can; the other twist looks down,\n"
+                "a little short of its best. The down end, 180° round, does the reverse.\n"
+                "best compromise: that twist looks up and the other looks down about equally; a few degrees off the nod line.")
         row = ttk.Frame(g); row.pack(fill="x")
         ttk.Label(row, text="Twisted:").pack(side="left")
         for pole in ("CW", "CCW"):
@@ -707,45 +713,40 @@ class App:
             return messagebox.showinfo("Rest height", "Enter the measured height first.")
         self.set_field("Rest height", round(meas - S.pivot_z(c) * 1000, 2))
 
-    def nod_tip(self, pole):
-        c = self.cfg()
-        try:
-            nods = S.nod_lines(c, pole)
-        except (TypeError, ValueError, ZeroDivisionError):
-            return None
-        return (f"Turn the head onto the {pole} nod line nearest it.\n{pole} nod lines: "
-                + ", ".join(f"{n:.1f}°" for n in sorted(nods)) + "\nThey move with the jam.")
-
     def have_sims(self):
         return all((p, 0) in self.sims for p in ("CW", "CCW"))
 
     def best_tip(self):
-        c = self.cfg()
-        if c is None or not self.have_sims():
-            return ("Turn the head to where twisting CW or CCW gives the strongest graceful look-up and look-down.\n"
-                    "Needs the sim for these values: it runs it first (about 2 minutes).")
-        d = best_rotation(self.sims, c["head"]["rotation_deg"])
-        ways = [f"twisted {p}: up {self.sims[p, 0][0]['graceful', 'up'][d]:.1f}°, "
-                f"down {self.sims[p, 0][0]['graceful', 'down'][d]:.1f}°" for p in ("CW", "CCW")]
-        return (f"Turn the head to {d}°, where twisting CW or CCW gives the strongest graceful look-up and look-down:\n"
-                + "\n".join(ways) + "\nIt repeats round the platform; this is the one nearest your head now.")
+        c, pole, method = self.cfg(), self.pole.get(), self.method.get()
+        other = "CCW" if pole == "CW" else "CW"
+        if c is None:
+            return "Turn the head to where the selected twist looks up. Fix the values first."
+        try:
+            lines = head_lines(c, pole, method)
+        except (ValueError, ZeroDivisionError):
+            return "Turn the head to where the selected twist looks up. The rods don't fit these values."
+        d = nearest(lines, c["head"]["rotation_deg"])
+        text = (f"Turn the head to {d:.1f}°, the up end of the nearest {pole} nod line. Twisted {pole} it looks up as far as "
+                f"it can; twisted {other} it looks down. The down end, {d % 360 - 180:.1f}°, does the reverse.\n"
+                if method == "nod line" else
+                f"Turn the head to {d:.1f}°, where twisted {pole} looks up and twisted {other} looks down about equally.\n")
+        text += "The other two, 120° round, are the same: " + ", ".join(f"{n:.1f}°" for n in sorted(lines) if n != d) + "."
+        if self.have_sims():
+            i = int(round(d)) % 360
+            text += "\nThere, graceful: " + ";  ".join(
+                f"twisted {p} up {self.sims[p, 0][0]['graceful', 'up'][i]:.1f}°, down {self.sims[p, 0][0]['graceful', 'down'][i]:.1f}°"
+                for p in (pole, other))
+        return text
 
     def to_best(self):
         c = self.cfg()
         if c is None:
             return
-        if not self.have_sims():
-            self.apply_best = True   # set it when the sim is done
-            return self.run_sims(False)
-        self.set_field("Head rotation", best_rotation(self.sims, c["head"]["rotation_deg"]))
-
-    def to_nod(self, pole):
-        c = self.cfg()
-        if c is None:
-            return
-        rot = c["head"]["rotation_deg"]
-        n = min(S.nod_lines(c, pole), key=lambda n: abs((n - rot + 180) % 360 - 180))
-        self.set_field("Head rotation", round(n, 1))
+        try:
+            lines = head_lines(c, self.pole.get(), self.method.get())
+        except (ValueError, ZeroDivisionError):
+            return messagebox.showwarning("Head", "The rods don't fit these values, so there are no nod lines.")
+        self.set_field("Head rotation", round(nearest(lines, c["head"]["rotation_deg"]), 1))
 
     def run_sims(self, sure):
         c = self.cfg()
@@ -793,9 +794,6 @@ class App:
                     self.busy = False
                     self.status.config(text="done" if kind == "sim_done" else f"failed: {a}")
                     self.refresh()
-                    if self.apply_best and self.have_sims():
-                        self.to_best()
-                    self.apply_best = False
                 elif kind == "plot":
                     m = re.match(r"sweep (\d+)/(\d+)", a)
                     self.plot_status.config(text=f"{m.group(1)} of {m.group(2)} sweeps done" if m else a[:80])

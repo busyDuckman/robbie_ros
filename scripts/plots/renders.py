@@ -52,8 +52,11 @@ def side_cam(heading):
 
 
 def nods_at_rest(sim):
-    """Nod line orientations (deg, platform frame) from the sim's rod twist, which must be at rest."""
-    return [st + ob / 2 - 90 for st, ob in zip(sim.cfg["sled"]["start_deg"], sim.orbit())]
+    """Nod line up ends (deg, platform frame), each bisecting a rod seen from above, from the sim's rod twist with the sleds
+    at their start positions. World angle less the platform's yaw: ~0 at rest, ~150 deg after it is turned by hand."""
+    R = sim.d.body("platform").xmat.reshape(3, 3)
+    yaw = math.degrees(math.atan2(R[1, 0], R[0, 0]))
+    return [st + ob / 2 - 90 - yaw for st, ob in zip(sim.cfg["sled"]["start_deg"], sim.orbit())]
 
 
 def top_panel(ax, img, sim, label, nods):
@@ -100,7 +103,7 @@ def run(book, cfgs, label, poses):
         top_panel(ax, snap(sim, r, "top"), sim, f"{label[d]} viewed from top, height {sim.height_mm():.2f} mm", nods_at_rest(sim))
     book.save(fig, F_, "render_rest_top", "Rest pose from the top, both twists",
               "Sim render looking straight down (orthographic) at rest, platform and head disk drawn see-through; eyes and orange stripe: the head at neck.yaml's head.rotation_deg (0 = rod end 1). The twist "
-              "angle printed on each green arc is measured in the sim. " + key + "; red: nod lines.",
+              "angle printed on each green arc is measured in the sim. " + key + "; red: nod lines (up ends).",
               title="Rest pose from the top (sim render; white eyes and orange stripe: the head)\n" + key, dpi=110)
 
     fig, axes = plt.subplots(1, len(order), figsize=(6.5 * len(order), 7), constrained_layout=True, squeeze=False)
@@ -117,7 +120,7 @@ def run(book, cfgs, label, poses):
                   f"now {S.direction(sim.orbit())} viewed from top, height {sim.height_mm():.2f} mm", nods_at_rest(sim))
     book.save(fig, F_, "render_turned_by_hand", "Platform turned the other way by hand (sim)",
               "Each twist after a 1 N m torque about the vertical axis is applied to the platform for 1 s against its twist "
-              "(sleds held) and then released for 2 s; top view after release. " + key + "; red: nod lines of the new twist.",
+              "(sleds held) and then released for 2 s; top view after release. " + key + "; red: nod lines (up ends) of the new twist.",
               title="Turning the platform the other way by hand (sim), top view after release\n" + key, dpi=110)
 
     rows = sorted({p["pose"] for p in poses}, key=lambda s: [q["pose"] for q in poses].index(s))
@@ -143,6 +146,6 @@ def run(book, cfgs, label, poses):
                          f"off {math.hypot(*pos[:2]) * 1000:.1f} mm", fontsize=10)
     book.save(fig, F_, "render_poses", "Rest, largest graceful pitch up and down (sim renders)",
               "For each twist, the head at neck.yaml's head.rotation_deg: the rest pose and the sweep points with the largest "
-              "graceful pitch up and down at that head orientation, re-driven in the sim. Red: nod lines (at rest). Top view and a side "
+              "graceful pitch up and down at that head orientation, re-driven in the sim. Red: nod lines (up ends, at rest). Top view and a side "
               "view along the head's left axis; orange arrow: the head's forward axis.",
               title="Rest, largest graceful pitch up and down, head at head.rotation_deg (sim renders)", dpi=90)

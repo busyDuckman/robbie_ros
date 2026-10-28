@@ -34,7 +34,7 @@ platform:
   mass: 0.25              # estimate: platform, Pi and eyes. Not critical.
 
 head:
-  rotation_deg: 20         # which way the head faces on the platform: 0 is centre to rod end 1, CCW seen
+  rotation_deg: 38.4       # which way the head faces on the platform: 0 is centre to rod end 1, CCW seen
                           # from above (docs/head_rotation.svg). Roll and pitch are in this frame.
 
 # The pole is where the rod ends jam (measured: they do). Twisting further is blocked there, and

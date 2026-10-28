@@ -145,9 +145,14 @@ The system is non-trivial, so I used the simulation to study the behaviour.
   - **Resting pose**: the sleds evenly spaced at 120°, and the platform level.
   - **CW state**: looking from the top, the manual clockwise torsioning of the neck joint to a stable pose.
   - **CCW state**: looking from the top, the manual counter-clockwise torsioning of the neck joint to a stable pose.
-  - **Nod line**: in the _resting pose_, nod lines lie halfway between each sled linkage and its matching upper platform linkage.
-    - A head facing along a nod line can make its largest graceful pitch in either up or down.
-    - A head facing 60° left or right of a _nod line_ has the opposite graceful pitch allowance.
+  - **Nod lines**: Three specific lines that cross the upper platform through its centre, equal distances apart.
+    - Each line sits halfway between a sled linkage and its matching upper platform linkage.
+    - Pivot actions along these lines are more _graceful_ and can also go significantly further when doing an _ugly_ movement.
+    - They are called "nod lines" because the head needs to be facing along one of the lines in order to be able to nod properly.
+    - One side of the _nod line_ is better at looking up, the other better at looking down, referred to as the _up end_ and the _down end_.
+    - Nod lines are different per the _CW/CCW state_.
+    - It's not exact, but twisting the top to change _CW/CCW states_ is basically sufficient to make a look-up orientated head become a look-down orientated head.
+
 
 ### 5.1 Overview
 We essentially have a tensegrity-like prism for a neck joint, which transforms the sled orientation into a platform roll/pitch. This system is not perfect; it performs some motions really well, and others quite poorly. And that's actually OK, provided we get the system behaving well where it counts.
@@ -231,7 +236,7 @@ The main trade-off is that the head movement becomes less centred as the jam ang
 
 ### 5.5 The look up vs look down trade-off
 
-Depending on configuration, the neck joint either looks up better or looks down better, depending on being aligned with a nod line, or being 60° off.
+Depending on which end of a nod line the head faces, the neck joint either looks up better or looks down better.
 
 <img src="docs/default_plot_output/18_pitch_by_head_orientation.png" alt="Largest pitch by head orientation, CW and CCW twist" width="900">
 

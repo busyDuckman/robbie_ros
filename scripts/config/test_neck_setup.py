@@ -55,16 +55,22 @@ def test_yaml_text():
     assert N.yaml_text(20.0, "deg") == "20"
 
 
-def test_best_rotation_picks_the_balanced_peak_nearest():
-    h = N.np.arange(361)
-    up = 10 + 2 * N.np.cos(N.np.radians(3 * (h - 30)))     # peaks at 30, 150, 270
-    down = 10 + 2 * N.np.cos(N.np.radians(3 * (h - 90)))   # peaks at 90, 210, 330
-    weak = N.np.zeros(361)
-    sims = {("CW", 0): ({("graceful", "up"): up, ("graceful", "down"): weak}, {}),
-            ("CCW", 0): ({("graceful", "up"): weak, ("graceful", "down"): down}, {})}
-    # min(up, down) peaks where the two cross, every 60 deg from 0
-    assert N.best_rotation(sims, 50) == 60
-    assert N.best_rotation(sims, -170) == 180
+def test_head_lines():
+    for pole in ("CW", "CCW"):
+        assert N.head_lines(CFG, pole, "nod line") == S.nod_lines(CFG, pole)
+    assert sorted(N.head_lines(CFG, "CW", "best compromise")) == [-90, 30, 150]
+    assert sorted(N.head_lines(CFG, "CCW", "best compromise")) == [-150, -30, 90]
+    # the compromise is halfway between the CW nod line and CCW's look-down line (its nod line + 60)
+    cw_nod, ccw_down = S.nod_lines(CFG, "CW")[0], S.nod_lines(CFG, "CCW")[0] + 60
+    assert N.head_lines(CFG, "CW", "best compromise")[0] == pytest.approx((cw_nod + ccw_down) / 2)
+
+
+def test_nearest_wraps_round():
+    lines = [38.4, 158.4, -81.6]
+    assert N.nearest(lines, 20) == 38.4
+    assert N.nearest(lines, 200) == 158.4
+    assert N.nearest(lines, -100) == -81.6
+    assert N.nearest(lines, -170) == 158.4   # 31.6 deg away across the wrap, not 151.6
 
 
 def test_yaml_set_fills_and_clears_an_optional_value():
