@@ -34,7 +34,7 @@ build:
 
 # Basic unit test run (also what CI runs: .github/workflows/test.yml)
 test:
-    uv run --python 3.12 --with mujoco==3.12.0 --with numpy --with pyyaml --with matplotlib --with pytest pytest -q scripts/plots scripts/config
+    uv run --python 3.12 --with mujoco==3.12.0 --with numpy --with pyyaml --with matplotlib --with pytest pytest -q scripts/plots scripts/config src/robbie_neck/test
 
 # Full testing, including sim runs (homing, pose-to-sled, unwinding)
 vet: test
@@ -77,14 +77,14 @@ stop:
 # local dev
 
 # (re-)start the MuJoCo sim, the neck poser window, the Rerun viewer and robbie_ros against the sim
-#  --headless to not show the simulator window, --cw to start in the CW pole (default --ccw)
+#  --headless to not show the simulator window, --ccw to start in the CCW pole (default --cw, the pole that looks up)
 #  Rerun goes where ROBBIE_RERUN (.env, from just setup) says, starting the viewer if needed (scripts/dev/rerun_viewer.sh)
 up *flags: down build
     #!/usr/bin/env bash
     set -euo pipefail
-    headless=false poser=true twist=ccw
+    headless=false poser=true twist=cw
     [[ " {{ flags }} " == *" --headless "* ]] && headless=true poser=false
-    [[ " {{ flags }} " == *" --cw "* ]] && twist=cw
+    [[ " {{ flags }} " == *" --ccw "* ]] && twist=ccw
     rerun="$(bash scripts/dev/rerun_viewer.sh $headless)"
     {{ _compose_dev }} run -d --name {{ _sim_container }} dev bash scripts/dev/ros.sh \
         ros2 launch robbie_bringup sim.launch.py headless:=$headless poser:=$poser twist:=$twist rerun:=$rerun >/dev/null
@@ -110,6 +110,16 @@ config:
 # Populate .plots/ with the neck kinematics plots (sweeps the sim when neck.yaml changes); see .plots/plots.md
 plot:
     uv run scripts/plots/plot.py .plots
+
+# Watch the neck IK keep the head's gaze on a moving point, in the MuJoCo viewer (standalone sim, no ROS)
+#  --pattern figure8|sweep|nod|loop|box|step|still (keys 1-7 in the viewer), --ccw (default --cw), --mode auto|none|force,
+#  --gate cost (default)|first_blush|margin|deadband and its settings, --sled-rate, --side, --up, --dist, --period, --headless; see --help
+ik-test *flags:
+    uv run scripts/ik/ik_test.py {{ flags }}
+
+# Tune and compare the IK's auto gates headless: every gate with a few settings, over the patterns and both poles
+ik-bench *flags:
+    uv run scripts/ik/ik_bench.py {{ flags }}
 
 ## --------------------------------------------------------------------------------------------------------------------
 # utils

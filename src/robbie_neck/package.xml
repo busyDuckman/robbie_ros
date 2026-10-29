@@ -3,13 +3,16 @@
 <package format="3">
   <name>robbie_neck</name>
   <version>0.0.1</version>
-  <description>Neck kinematics and settings. For now, the settings other nodes share: the head's rotation on the platform (neck.yaml) and the pole the neck sits in (runtime).</description>
+  <description>Neck kinematics and settings: the IK solver (ik.py), and the settings other nodes share: the head's rotation on the platform (neck.yaml) and the pole the neck sits in (runtime).</description>
   <maintainer email="the.duckman@gmail.com">busyDuckman</maintainer>
   <license>MIT</license>
 
   <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
   <exec_depend>python3-yaml</exec_depend>
   <exec_depend>robbie_description</exec_depend>
+
+  <test_depend>python3-pytest</test_depend>
 
   <export>
     <build_type>ament_python</build_type>

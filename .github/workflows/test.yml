@@ -5,6 +5,7 @@ on:
   push:
     paths: &paths
       - "src/robbie_description/**"
+      - "src/robbie_neck/**"
       - "scripts/plots/**"
       - "scripts/config/**"
       - "justfile"

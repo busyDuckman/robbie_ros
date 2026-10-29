@@ -56,13 +56,14 @@ def test_yaml_text():
 
 
 def test_head_lines():
-    for pole in ("CW", "CCW"):
-        assert N.head_lines(CFG, pole, "nod line") == S.nod_lines(CFG, pole)
-    assert sorted(N.head_lines(CFG, "CW", "best compromise")) == [-90, 30, 150]
-    assert sorted(N.head_lines(CFG, "CCW", "best compromise")) == [-150, -30, 90]
-    # the compromise is halfway between the CW nod line and CCW's look-down line (its nod line + 60)
-    cw_nod, ccw_down = S.nod_lines(CFG, "CW")[0], S.nod_lines(CFG, "CCW")[0] + 60
-    assert N.head_lines(CFG, "CW", "best compromise")[0] == pytest.approx((cw_nod + ccw_down) / 2)
+    assert N.head_lines(CFG, "nod line (up)") == S.nod_lines(CFG, "CW")
+    down = N.head_lines(CFG, "nod line (down)")
+    assert sorted(down) == sorted((n + 60 + 180) % 360 - 180 for n in S.nod_lines(CFG, "CCW"))   # CCW's down ends
+    assert sorted(N.head_lines(CFG, "best compromise")) == [-90, 30, 150]
+    # the compromise is halfway between CW's up end and CCW's down end
+    up0, down0 = N.nearest(N.head_lines(CFG, "nod line (up)"), 30), N.nearest(down, 30)
+    assert N.nearest(N.head_lines(CFG, "best compromise"), 30) == pytest.approx((up0 + down0) / 2)
+    assert N.METHODS == ("nod line (up)", "nod line (down)", "best compromise")
 
 
 def test_nearest_wraps_round():

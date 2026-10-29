@@ -179,20 +179,24 @@ def load_sweep(cfg):
     return common.graceful_ugly(common.to_frame(a, ck["head_zero_deg"])), ck   # by head.rotation_deg
 
 
-METHODS = ("nod line", "best compromise")   # how Find best picks the head rotation
+METHODS = ("nod line (up)", "nod line (down)", "best compromise")   # how Find best picks the head rotation
+UP_POLE, DOWN_POLE = "CW", "CCW"   # the convention: the head is set up so that twisted CW it looks up, twisted CCW down
 
 
-def head_lines(cfg, pole, method):
-    """The three head.rotation_deg (120 deg apart) where the neck twisted `pole` looks up, by `method`:
-    nod line: the up ends of `pole`'s nod lines. `pole` looks up as far as it can; the other twist looks down, a little
-    short of its best. The down ends, 180 deg round, do the reverse (same platform pose, head turned round).
-    best compromise: `pole` looks up and the other twist looks down about equally. That's halfway between the
-    nod line (jam/2 from a rod end) and the other twist's look-down line (60 - jam/2), so always 30 deg from a
-    rod end whatever the geometry: the two twists are mirror images. Neither needs the sim."""
-    if method == "nod line":
-        return S.nod_lines(cfg, pole)
-    s = 1 if pole == "CW" else -1
-    return [(30 * s + 120 * k + 180) % 360 - 180 for k in range(3)]
+def head_lines(cfg, method):
+    """The three head.rotation_deg (120 deg apart) Find best offers, by `method`. CW is the twist that looks up and CCW
+    the one that looks down; the two are mirror images, so that is a convention, and robbie_ros defaults to CW.
+    nod line (up): the up ends of CW's nod lines, jam/2 from a rod end. Twisted CW the head looks up as far as it can;
+    twisted CCW it looks down, a little short of its best.
+    nod line (down): the down ends of CCW's nod lines, 60 - jam/2 from a rod end. The reverse: twisted CCW the head
+    looks down as far as it can, twisted CW it looks up a little short of its best.
+    best compromise: CW looks up and CCW looks down about equally. Halfway between the two, so always 30 deg from a
+    rod end whatever the geometry. None needs the sim."""
+    if method == "nod line (up)":
+        return S.nod_lines(cfg, UP_POLE)
+    if method == "nod line (down)":
+        return [(n + 60 + 180) % 360 - 180 for n in S.nod_lines(cfg, DOWN_POLE)]
+    return [(30 + 120 * k + 180) % 360 - 180 for k in range(3)]
 
 
 def nearest(lines, rot):
@@ -446,7 +450,7 @@ class App:
                 self.notes = json.load(f)
         except (OSError, ValueError):
             self.notes = {}
-        self.pole = tk.StringVar(value=self.notes.get("pole", "CCW"))
+        self.pole = tk.StringVar(value=self.notes.get("pole", UP_POLE))
         self.build()
         self.refresh()
         root.after(100, self.poll)
@@ -476,17 +480,18 @@ class App:
         b = ttk.Button(row, text="Find best", style="Best.TButton", command=self.to_best); b.pack(side="left", padx=2)
         Tip(b, self.best_tip)
         self.method = tk.StringVar(value=METHODS[0])
-        cb = ttk.Combobox(row, textvariable=self.method, values=METHODS, state="readonly", width=15); cb.pack(side="left", padx=2)
-        Tip(cb, "How Find best picks the head rotation, for the twist selected below.\n"
-                "nod line: the up end of its nearest nod line. That twist looks up as far as it can; the other twist looks down,\n"
-                "a little short of its best. The down end, 180° round, does the reverse.\n"
-                "best compromise: that twist looks up and the other looks down about equally; a few degrees off the nod line.")
+        cb = ttk.Combobox(row, textvariable=self.method, values=METHODS, state="readonly", width=16); cb.pack(side="left", padx=2)
+        Tip(cb, "How Find best picks the head rotation. Twisted CW the head looks up, twisted CCW it looks down: the convention.\n"
+                "nod line (up): the up end of the nearest CW nod line. Twisted CW it looks up as far as it can; twisted CCW it\n"
+                "looks down, a little short of its best.\n"
+                "nod line (down): the down end of the nearest CCW nod line. The reverse: CCW looks down as far as it can.\n"
+                "best compromise: CW looks up and CCW looks down about equally; a few degrees off either nod line.")
         row = ttk.Frame(g); row.pack(fill="x")
-        ttk.Label(row, text="Twisted:").pack(side="left")
+        ttk.Label(row, text="Drawn twisted:").pack(side="left")
         for pole in ("CW", "CCW"):
             b = ttk.Radiobutton(row, text=pole, value=pole, variable=self.pole, command=self.changed); b.pack(side="left", padx=4)
-            Tip(b, "Which way the neck is twisted into its pole, seen from above. The drawings follow it.\n"
-                   "Not in neck.yaml: it's set at runtime (just up --cw in the sim, just twist on the Pi).")
+            Tip(b, "Which pole the drawings show, seen from above. CW is the pole that looks up and the default;\n"
+                   "the owner can turn the neck into either by hand, so it's set at runtime (just up --ccw, just twist on the Pi).")
 
         for title, fields, tip in (("openscad values", OPENSCAD, "Change these if you changed them in robbie_openscad."),
                                    ("Other measurements", MEASURED, None)):
@@ -717,25 +722,26 @@ class App:
         return all((p, 0) in self.sims for p in ("CW", "CCW"))
 
     def best_tip(self):
-        c, pole, method = self.cfg(), self.pole.get(), self.method.get()
-        other = "CCW" if pole == "CW" else "CW"
+        c, method = self.cfg(), self.method.get()
         if c is None:
-            return "Turn the head to where the selected twist looks up. Fix the values first."
+            return "Turn the head to where twisted CW looks up and twisted CCW looks down. Fix the values first."
         try:
-            lines = head_lines(c, pole, method)
+            lines = head_lines(c, method)
         except (ValueError, ZeroDivisionError):
-            return "Turn the head to where the selected twist looks up. The rods don't fit these values."
+            return "Turn the head to where twisted CW looks up and twisted CCW looks down. The rods don't fit these values."
         d = nearest(lines, c["head"]["rotation_deg"])
-        text = (f"Turn the head to {d:.1f}°, the up end of the nearest {pole} nod line. Twisted {pole} it looks up as far as "
-                f"it can; twisted {other} it looks down. The down end, {d % 360 - 180:.1f}°, does the reverse.\n"
-                if method == "nod line" else
-                f"Turn the head to {d:.1f}°, where twisted {pole} looks up and twisted {other} looks down about equally.\n")
+        text = {"nod line (up)": f"Turn the head to {d:.1f}°, the up end of the nearest CW nod line. Twisted CW it looks up as "
+                                 "far as it can; twisted CCW it looks down, a little short of its best.\n",
+                "nod line (down)": f"Turn the head to {d:.1f}°, the down end of the nearest CCW nod line. Twisted CCW it looks "
+                                   "down as far as it can; twisted CW it looks up, a little short of its best.\n",
+                "best compromise": f"Turn the head to {d:.1f}°, where twisted CW looks up and twisted CCW looks down about "
+                                   "equally.\n"}[method]
         text += "The other two, 120° round, are the same: " + ", ".join(f"{n:.1f}°" for n in sorted(lines) if n != d) + "."
         if self.have_sims():
             i = int(round(d)) % 360
             text += "\nThere, graceful: " + ";  ".join(
                 f"twisted {p} up {self.sims[p, 0][0]['graceful', 'up'][i]:.1f}°, down {self.sims[p, 0][0]['graceful', 'down'][i]:.1f}°"
-                for p in (pole, other))
+                for p in (UP_POLE, DOWN_POLE))
         return text
 
     def to_best(self):
@@ -743,7 +749,7 @@ class App:
         if c is None:
             return
         try:
-            lines = head_lines(c, self.pole.get(), self.method.get())
+            lines = head_lines(c, self.method.get())
         except (ValueError, ZeroDivisionError):
             return messagebox.showwarning("Head", "The rods don't fit these values, so there are no nod lines.")
         self.set_field("Head rotation", round(nearest(lines, c["head"]["rotation_deg"]), 1))

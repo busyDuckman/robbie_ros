@@ -191,7 +191,7 @@ to tune in the rod length and the jam angle of the sled linkage.
 
 **Want these charts for a custom Robbie?**, two options:
   - Edit [neck.yaml], then run `just plot`. Plots are saved to `.plots/` after the simulation finishes.
-  - or run "just config" and go through the tabs.
+  - (or) run "just config" and go through the tabs.
 
 ### 5.2 What is the available movement?
 As you might expect, the movement limits have a 3-fold rotational symmetry.
@@ -291,10 +291,11 @@ In robbie_commons.scad
 For now, the IK is about solving roll/pitch/yaw. 
 
 The solver has a table, created by passing neck.yaml through the simulator.
+Two solvers exist, one for ht CW / CCW states, which are essentially a reconfiguration of the robot.
 
 The solver gets:
   - roll/pitch/yaw
-  - state (CW / CCW)
+  - current sled angles
   - _correction_mode_ (auto | none | force)
   - _time_ since last graceful correction  (only used if correction_mode = auto)
 
@@ -304,6 +305,7 @@ The solver returns:
   - reachable error roll
   - reachable error pitch
   - graceful flag
+  - corrected flag (caller must reset the timer to 0)
 
 Yaw is not solved by the table, it's defined by moving all sleds in unison. The table is 2D 
 (roll, pitch), and produces a residual yaw. So after using the table to get the roll and 
@@ -315,8 +317,7 @@ is returned instead along with the size of the error.
 ### 6.1 Checking assumptions
 My intuition was that every sled orientation only defines a single pose, that was what I designed
 years ago anyway. Before starting the IK work I ran a sweep on the simulator to make sure there was 
-no hysteresis (pose defined by how the robot got there). It was confirmed, which means we can use a
-reversed lookup table for the IK.
+no hysteresis (pose defined by how the robot got there). It was confirmed, which means we can use a reversed lookup table for the IK.
 
 However, as mentioned before, multiple solutions exist for any given roll/pitch. 
 
@@ -326,33 +327,16 @@ _graceful_ movement (centralised head). However doing path switching movements t
 an _ugly_ pose to a _graceful_ may introduce corrective movements that fight ad-hoc motion 
 requests.
 
-So a path selection policy is needed, and I am introducing a time variable _gamma_ to act as a threshold
-for corrections.
+So a path selection policy is needed. 
 
-If multiple poses give a requested roll/pitch, the policy is as follows:
-  - if all destination solutions are *less* central than current pos
-    - use pose requiring the "shortest sled movements"
-  - if any destination solution is *more* central than current pos
-    - calculate _kappa_ as _gain_ * min(_time_, _gamma_)
-    - find the set where dest_offset < _kappa_ * current_head_offset
-      - straight after a correction _kappa_ is zero so nothing gets in, it opens up over _gamma_ seconds
-      - if that's not empty "use the best"
-        - a course correction has taken effect, so _time_ resets to zero.
-      - if it's empty, use the pose requiring the "shortest sled movements"
+This has been difficult tyo get right, so the solver has a few to tune and compare, 
 
-*"shortest sled movements"* is the sum of all sled movements. In this way even a request for a 
-yaw change could be used to change path to a more graceful pose, as opposed to the simple 
-drive all sleds evenly.
+    just ik-test --gate   # use a specific policy
+    just ik-bench         # test all policies
 
-*"use the best"*
-For now, that is defined by the solution with the shortest sled movements.
-I will have to run an experiment using the most central solution instead.
+Full policy options here and work [here](docs/selection_policies.md).
 
-That leaves _gain_ and _gamma_ as what needs to be tuned until the system is well behaved.
-_gain_ * _gamma_ is the fraction of the current offset a correction has to beat once the gate is fully open,
-so it wants to be a bit under 1.
-
-TLDR; _gain_ controls how eagerly it jumps based on distance, and _gamma_ controls how often it will try.
+The best known policy is always configured as the default.
 
 ### 6.3 Using correction modes None and Force for dealing with a continuous series of positions
 It's possible the solver is being provided a continuous series of positions: interpolated values along a 
@@ -390,6 +374,7 @@ it will take over and drive all sleds in unison until the cable is unwound.
 
 The unwinder watches the sensors as the ground truth, not trusting the yaw calculations,
 because software can go wrong.
+
 
 ## 7.0 Conclusion
 
