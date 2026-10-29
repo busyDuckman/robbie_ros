@@ -191,7 +191,7 @@ to tune in the rod length and the jam angle of the sled linkage.
 
 **Want these charts for a custom Robbie?**, two options:
   - Edit [neck.yaml], then run `just plot`. Plots are saved to `.plots/` after the simulation finishes.
-  - or; run "just config" and go through the tabs.
+  - or run "just config" and go through the tabs.
 
 ### 5.2 What is the available movement?
 As you might expect, the movement limits have a 3-fold rotational symmetry.
@@ -270,12 +270,12 @@ First, **thanks for still being here**, those last few pages were a bit heavy.
 
 Configuring your Robbie means:
   - making the neck.yaml file.
-  - 3d printing the the upper platform with a matching head_rotation.
+  - 3d printing the upper platform with a matching head_rotation.
 
 Rather than try and figure it out from the theory (above), there is a util that can take care of it. Run `just config`. If you don't know your rod jam limits (quite likely), you can measure the resting pose and this util will back-calculate it. You can also use the tabs to see the same charts we just discussed. So long as you could get the gist of what was covered here, you should be fine with the config util.
 
 > [!NOTE]
-> The last thing you need to do, is hit the "find best" button and get the angle from the "head" arrow. Then hit save. Put that value in into the OpenSCAD settings before printing the head.
+> The last thing you need to do is hit the "find best" button and get the angle from the "head" arrow. Then hit save. Put that value into the OpenSCAD settings before printing the head.
 
 <img src="docs/reference_photos/config_gui.png" alt="The neck setup window (just config)" width="900">
 
@@ -315,10 +315,10 @@ is returned instead along with the size of the error.
 ### 6.1 Checking assumptions
 My intuition was that every sled orientation only defines a single pose, that was what I designed
 years ago anyway. Before starting the IK work I ran a sweep on the simulator to make sure there was 
-no hysteresis (pose defined by how the robot got there). It was confirmed which means we can use a
+no hysteresis (pose defined by how the robot got there). It was confirmed, which means we can use a
 reversed lookup table for the IK.
 
-However, as mentioned before multiple solutions exist for any given roll/pitch. 
+However, as mentioned before, multiple solutions exist for any given roll/pitch. 
 
 ### 6.2 Motion planning (_correction_mode_ == auto) using a path selection policy
 Motion planning is complex because multiple paths are possible and we are looking for the most 
@@ -354,7 +354,7 @@ so it wants to be a bit under 1.
 
 TLDR; _gain_ controls how eagerly it jumps based on distance, and _gamma_ controls how often it will try.
 
-### 6.3 Using correction mode's None and Force for dealing with a continuous series of positions
+### 6.3 Using correction modes None and Force for dealing with a continuous series of positions
 It's possible the solver is being provided a continuous series of positions: interpolated values along a 
 curve, or realtime motion tracking.
 
