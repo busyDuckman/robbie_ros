@@ -287,7 +287,109 @@ In robbie_commons.scad
 
 
 ## 6.0 Inverse kinematics
-(under construction)
+
+For now, the IK is about about solving roll/pitch/yaw. 
+
+The solver has a table, created by passing neck.yaml through the simulator.
+
+The solver gets:
+  - roll/pitch/yaw
+  - state (CW / CCW)
+  - _correction_mode_ (auto | none | force)
+  - _time_ since last graceful correction  (only used if correction_mode = auto)
+
+The solver returns:
+  - three new sled angles
+  - new head offset amount
+  - reachable error roll
+  - reachable error pitch
+  - graceful flag
+
+Yaw is not solved by the table, its defined by moving all sleds in unison. The table is 2D 
+(roll, pitch), and produces a residual yaw. So after using the table to get the roll and 
+pitch movements, a final yaw adjustment is determined as requested yaw - residual yaw. 
+
+If either reachable error > 0, then the solution was not possible. The nearest possible solution 
+is returned instead along with the size of the error. 
+
+## Checking Assumptions
+My intuition was that every sled orientation only defines a single pose, that was that  I designed
+years ago anyway. Before starting the IK work I ran a sweep on the simulator to make sure there was 
+no hysteresis (pose defined by how te robot got there). It was confirmed which means we can use a
+revered lookup table for the IK.
+
+However, as mentioned before multiple solutions exist for any given roll/pitch. 
+
+## Motion planning (_correction_mode_ == auto) using a path selection policy 
+Motion planning is complex because multiple paths are possible and we are looking for the most 
+_graceful_ movement (centralised head). However doing path switching movements to recover from 
+an _ugly_ pose to a _graceful_ may introduce corrective movements that fight ad-hoc motion 
+requests.
+
+So a path selection policy is needed, and I am introducing a time variable _gamma_ to act as a threshold
+for corrections.
+
+If multiple poses give a requested roll/pith The policy is as follows:
+  - if all destination solutions are *less* central than current pos
+    - use pose requiring the "shortest sled movements"
+  - if any destination solution is *more* central than current pos
+    - calculate _kappa_ as _gain_ * min(_time_, _gamma_)
+    - find the set where dest_offset < _kappa_ * current_head_offset
+      - straight after a correction _kappa_ is zero so nothing gets in, it opens up over _gamma_ seconds
+      - if thats not empty "use the best"
+        - a corse correction has taken effect, so _time_ resets to zero.
+      - if it's empty, use the pose requiring the "shortest sled movements"
+
+*"shortest sled movements"* is the sum of all sled movements. In this way even a request for a 
+yaw change could be used to change path to a more graceful pose, as apposed to the simple 
+dive all sleds evenly.
+
+*"use the best"*
+For now, that is defined by the solution with the shortest sled movements.
+I will have to run an experiment using the most central solution instead.
+
+That leaves _gain_ and  _gamma_ as what needs to be tuned until the system is well behaved.
+_gain_ * _gamma_ is the fraction of the current offset a correction has to beat once the gate is fully open,
+so it wants to be a bit under 1.
+
+TLDR; _kappa_ controls how eagerly it jumps based on distance, and _gamma_ controls how often it will try.
+
+## Using correction mode's None and Force for dealing with a continuous series of positions.
+It's possible the solver being provided a continuous series of positions, it interpolated values along a 
+curve, or realtime motion tracking.
+
+In this event, the IK solver may produce path selection events (secondary motions) making the movement 
+weird. The kappa and time variable is meant to fight that, making the corrections less frequent 
+and more opportunistic.
+
+But that trade off heuristic can be bypassed, *important if speed of response is a priority*.
+If the correction is set to _None_ the robot will just use the solution with the shortest sled movement.
+
+Once the continuous series of positions comes to an end and the robot is "idle", issuing the 
+current roll/pitch/yaw with correction set to _Force_, causes the robot to move to the "most central" version
+of its current posture.
+
+
+## 6.1 Gap between simulation and reality
+
+Nothing is perfect, neck.yaml, the simulation, and the physical build will all have errors,
+but for now I don't care. 
+
+The planning here is all about graceful motions and an  engaging and realistic "performance".
+Nothing is being placed, or machined, and accuracy of the movement is a secondary factor to 
+how the movement is made.
+
+The goal is simply to make sure the gap between simulation and reality is small and
+acceptable.
+
+TODO: The gap will be measured, using a camera (or IMU), as a sanity check.
+
+# 6.2 Unwinding the cable
+The cable wind watcher sits above the IK solver. In the event the cable needs unwinding
+it will take over and drive all sleds in unison until the cable is unwound.
+
+The unwinder watches the sensors as the ground truth, not trusting the yaw calculations,
+because software can go wrong.
 
 ## 7.0 Conclusion
 
